@@ -474,12 +474,14 @@ const TRACKS=[
    flowerColors:[0xff8ac2,0xffd23e,0xffffff,0xff6f6f,0x7ee0c0],
    hemiSky:0xeaf6ff,hemiGround:0xc2a76a,sun:0xfff0c0,offroad:"sand" }
 },
-{ /* ---- NÍVEL 3: FAZENDA MALUCA (mais difícil: chicane fechado + muitos obstáculos + lamaçal) ---- */
+{ /* ---- NÍVEL 3: FAZENDA MALUCA (mais difícil) ----
+     LAMAÇAL: largura total da pista (w:15), comprimento de ~8 carros (len:21),
+     ponte CENTRAL (offset:0), larga (~3 carros = w:8) e ELEVADA (h:0.3). */
  name:"FAZENDA MALUCA", icon:"🚜",
  cp:[[-20,75,0],[70,75,0],[130,55,0.5],[155,0,1],[130,-55,1.5],[75,-90,2],[32,-68,1.5],[-8,-112,1],[-60,-85,1],[-110,-60,0.5],[-130,-10,0],[-115,40,0],[-75,65,0]],
  fin:[25,75],
  shortcut:{gA:[-125,-40],gB:[-115,15],P:[-95,-12]},
- mudpit:{x:45,z:75,len:8,w:15,bridge:{offset:-4,w:3,len:12}},
+ mudpit:{x:45,z:75,len:21,w:15,bridge:{offset:0,w:8,len:25,h:0.3}},
  zones:[ {x:-120,z:-28,r:7,surf:"dirt"},{x:-105,z:-12,r:9,surf:"dirt"},{x:-112,z:4,r:7,surf:"dirt"} ],
  ramps:[ {x:105,z:-72,r:7,pow:10},{x:-125,z:-35,r:5,pow:7} ],
  pads:[ {x:20,z:75,len:14},{x:140,z:-30,len:13},{x:-60,z:-87,len:12} ],
@@ -791,7 +793,7 @@ function buildSigns(signs){
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,3,6),MAT(0x888888));
   pole.position.set(p.x,s.p.y+1.5,p.z); raceScene.add(m,pole); }
 }
-/* ---- LAMAÇAL + PONTE + PORQUINHOS ---- */
+/* ---- LAMAÇAL + PONTE CENTRAL ELEVADA + PORQUINHOS ---- */
 function setupMudpit(def){
  const pit=def.mudpit; if(!pit)return;
  const i=idxNear(pit.x,pit.z);
@@ -808,6 +810,16 @@ function mudpitSurface(x,z){
  const b=pit.bridge;
  if(Math.abs(along)<=b.len/2&&Math.abs(side-b.offset)<=b.w/2)return "road";
  return "mudpit";
+}
+/* altura da ponte: o kart SOBE nela (só dentro do tablado central) */
+function mudpitBridgeH(x,z){
+ const def=TRACKS[currentTrack]; const pit=def.mudpit; if(!pit||pit.fx===undefined)return 0;
+ const dx=x-pit.x, dz=z-pit.z;
+ const along=dx*pit.fx+dz*pit.fz;
+ const side=dx*pit.sx+dz*pit.sz;
+ const b=pit.bridge;
+ if(Math.abs(along)<=b.len/2&&Math.abs(side-b.offset)<=b.w/2)return (b.h||0.3);
+ return 0;
 }
 function pitToWorld(pit,along,side){
  return {x:pit.x+pit.fx*along+pit.sx*side, z:pit.z+pit.fz*along+pit.sz*side};
@@ -837,41 +849,47 @@ function buildMudpit(def){
  const pit=def.mudpit; if(!pit||pit.fx===undefined)return;
  const angle=Math.atan2(pit.fx,pit.fz);
  const gy=pit.gy;
+ const b=pit.bridge;
+ const bh=b.h||0.3;
+ // lama ocupando TODA a largura da pista
  const mud=new THREE.Mesh(new THREE.BoxGeometry(pit.len,0.12,pit.w),MAT(0x4a3520));
  mud.position.set(pit.x,gy+0.03,pit.z); mud.rotation.y=angle; mud.receiveShadow=true;
  raceScene.add(mud);
- const pud=new THREE.Mesh(new THREE.BoxGeometry(pit.len*0.72,0.06,pit.w*0.55),MAT(0x2e2010));
+ const pud=new THREE.Mesh(new THREE.BoxGeometry(pit.len*0.85,0.06,pit.w*0.7),MAT(0x2e2010));
  pud.position.set(pit.x,gy+0.07,pit.z); pud.rotation.y=angle;
  raceScene.add(pud);
- const b=pit.bridge;
+ // ponte CENTRAL e ELEVADA
  const bcx=pit.x+pit.sx*b.offset, bcz=pit.z+pit.sz*b.offset;
- const deck=new THREE.Mesh(new THREE.BoxGeometry(b.len,0.14,b.w),MAT(0x9a6a3f));
- deck.position.set(bcx,gy+0.1,bcz); deck.rotation.y=angle;
+ const deckY=gy+bh;
+ const deck=new THREE.Mesh(new THREE.BoxGeometry(b.len,0.16,b.w),MAT(0x9a6a3f));
+ deck.position.set(bcx,deckY,bcz); deck.rotation.y=angle;
  deck.castShadow=true; deck.receiveShadow=true;
  raceScene.add(deck);
- const nPlanks=Math.max(2,Math.floor(b.len/0.75));
+ const nPlanks=Math.max(2,Math.floor(b.len/1.1));
  for(let i=0;i<nPlanks;i++){
   const t=((i/(nPlanks-1))-0.5)*(b.len-0.6);
   const plank=new THREE.Mesh(new THREE.BoxGeometry(0.55,0.05,b.w*0.95),MAT(i%2?0x8a5a2f:0xa87a4f));
-  plank.position.set(bcx+pit.fx*t, gy+0.16, bcz+pit.fz*t);
+  plank.position.set(bcx+pit.fx*t, deckY+0.09, bcz+pit.fz*t);
   plank.rotation.y=angle;
   raceScene.add(plank); }
  for(const so of [b.w/2, -b.w/2]){
-  const rail=new THREE.Mesh(new THREE.BoxGeometry(b.len,0.1,0.1),MAT(0x7a4a1f));
-  rail.position.set(bcx+pit.sx*so, gy+0.26, bcz+pit.sz*so);
+  const rail=new THREE.Mesh(new THREE.BoxGeometry(b.len,0.1,0.12),MAT(0x7a4a1f));
+  rail.position.set(bcx+pit.sx*so, deckY+0.22, bcz+pit.sz*so);
   rail.rotation.y=angle;
   raceScene.add(rail);
   for(const t of [-b.len/2+0.3, 0, b.len/2-0.3]){
-   const post=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.3,0.08),MAT(0x6a3a15));
-   post.position.set(bcx+pit.fx*t+pit.sx*so, gy+0.15, bcz+pit.fz*t+pit.sz*so);
+   const post=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.32,0.09),MAT(0x6a3a15));
+   post.position.set(bcx+pit.fx*t+pit.sx*so, deckY+0.12, bcz+pit.fz*t+pit.sz*so);
    raceScene.add(post); } }
- for(const t of [-b.len/2+0.5, b.len/2-0.5]){
-  for(const so of [b.w/2-0.3, -b.w/2+0.3]){
-   const post=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.11,0.5,6),MAT(0x5a3010));
-   post.position.set(bcx+pit.fx*t+pit.sx*so, gy-0.15, bcz+pit.fz*t+pit.sz*so);
+ // pilares de sustentação descendo até a lama
+ for(const t of [-b.len/2+0.5, -b.len/6, b.len/6, b.len/2-0.5]){
+  for(const so of [b.w/2-0.4, -b.w/2+0.4]){
+   const post=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.12,bh+0.3,6),MAT(0x5a3010));
+   post.position.set(bcx+pit.fx*t+pit.sx*so, gy+(bh+0.3)/2-0.15, bcz+pit.fz*t+pit.sz*so);
    raceScene.add(post); } }
- const p1=pitToWorld(pit,-1.5,5); buildPig(p1.x,p1.z,0.6);
- const p2=pitToWorld(pit,1.8,5.8); buildPig(p2.x,p2.z,-2.2);
+ // porquinhos nas duas faixas de lama (laterais da ponte)
+ const p1=pitToWorld(pit,-4, 5.5); buildPig(p1.x,p1.z,0.6);
+ const p2=pitToWorld(pit, 4,-5.5); buildPig(p2.x,p2.z,-2.2);
 }
 function buildFenceRect(cx,cz,w,h){
  const posts=[]; const step=4;
@@ -1364,8 +1382,12 @@ function groundInfo(k){
  else { surf="road";
   for(const p of TRACK.patches) if(inRange(k.idx,p.i0,p.i1)&&Math.abs(lat)<RW-0.5){ surf=p.surf; break; } }
  const def=TRACKS[currentTrack];
- if(def.mudpit){ const ms=mudpitSurface(k.pos.x,k.pos.z); if(ms) surf=ms; }
- return {gy:s.p.y, lat, surf};
+ let gyOut=s.p.y;
+ if(def.mudpit){
+  const ms=mudpitSurface(k.pos.x,k.pos.z); if(ms) surf=ms;
+  gyOut+=mudpitBridgeH(k.pos.x,k.pos.z);
+ }
+ return {gy:gyOut, lat, surf};
 }
 function inRange(i,i0,i1){ return ((i-i0+N)%N)<=((i1-i0+N)%N); }
 function grantBoost(k,dur,pow){ const d=dur*k.st.nitroMul;

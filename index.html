@@ -30,8 +30,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #menu .col{display:flex;flex-direction:column;align-items:center}
 #menu .hint{position:absolute;bottom:24px;color:#ffffff66;font-size:11px;font-family:system-ui;text-align:center;padding:0 12px}
 .panel{background:var(--painel);border:3px solid #28527a;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
-
-/* ===== SELEÇÃO ===== */
 #select{justify-content:flex-start;padding:0}
 #selTop{display:flex;gap:14px;padding:12px 14px;align-items:flex-start;width:100%;z-index:2}
 #selTitle{flex:1;min-width:0}
@@ -53,8 +51,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 .stat{margin:7px 0;font-size:11px;color:#cfeaff;letter-spacing:1px}
 .stat .bar{height:12px;background:#0b1c30;border-radius:7px;border:2px solid #28527a;overflow:hidden}
 .stat .fill{height:100%;background:linear-gradient(90deg,#3ddc55,#ffd23e);border-radius:4px}
-
-/* ===== HUD ===== */
 #hud{position:fixed;inset:0;z-index:8;pointer-events:none;font-family:inherit}
 .hbox{position:absolute;background:var(--painel);border:3px solid #28527a;border-radius:12px;color:#fff;padding:8px 16px;transform:skewX(-6deg);box-shadow:0 6px 16px rgba(0,0,0,.45)}
 #hudLap{top:14px;left:14px;font-size:22px;letter-spacing:2px}
@@ -85,8 +81,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #resTable tr.me td{color:#ffd23e}
 #resTable td.pos{font-size:18px;color:#fff;width:44px}
 .med1{color:#ffd700!important}.med2{color:#cfd8e6!important}.med3{color:#e0915a!important}
-
-/* ===== CONTROLES DE TOQUE ===== */
 #touch{position:fixed;inset:0;z-index:9;pointer-events:auto;touch-action:none}
 .tb{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:none;
   border-radius:50%;border:3px solid rgba(255,255,255,.4);background:rgba(10,25,45,.55);color:#fff;
@@ -99,11 +93,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #tD{right:118px;bottom:22px;width:70px;height:70px;font-size:12px;background:rgba(55,120,220,.55)}
 #tI{right:124px;bottom:104px;width:58px;height:58px;font-size:11px;background:rgba(210,165,35,.6)}
 #tPause{right:8px;top:8px;width:50px;height:50px;font-size:20px;border-radius:12px;pointer-events:auto;background:rgba(10,25,45,.6)}
-
 #fps{position:fixed;left:8px;bottom:4px;color:#ffffff55;font-size:10px;z-index:5;font-family:monospace}
 #err{position:fixed;left:8px;bottom:20px;right:8px;color:#ff8080;font-size:11px;z-index:99;font-family:monospace;display:none;background:#0008;padding:4px}
 #dbg{position:fixed;top:70px;left:14px;z-index:15;color:#7CFC00;font:11px monospace;background:#000a;padding:8px;border-radius:8px;display:none;pointer-events:none;white-space:pre;line-height:1.5}
-
 @media (max-width:820px){
   .btn{font-size:16px;padding:11px 26px}
   #menu .logo{font-size:13vw}
@@ -301,10 +293,11 @@ const settings={som:true,sombras:true,diff:"normal"};
 let selChar=1, selTrack=0;
 
 /* ============================================================
- DEFINIÇÃO DAS PISTAS (não remover nenhuma; só adicionar)
+ DEFINIÇÃO DAS PISTAS — cada uma com traçado, sentido, itens e
+ obstáculos próprios. NÃO remover; apenas adicionar novas.
 ============================================================ */
 const TRACKS=[
-{ /* ---------------- 0: CIRCUITO VERDE ---------------- */
+{ /* ---------------- 0: CIRCUITO VERDE (anti-horário) ---------------- */
  name:"CIRCUITO VERDE", icon:"🌿",
  cp:[[-20,42,0],[70,42,0],[122,18,1],[142,-34,4],[116,-88,9],[55,-114,12],[-15,-112,10],[-72,-88,6],[-112,-46,3],[-128,2,1],[-92,32,0.3]],
  fin:[10,42],
@@ -316,7 +309,7 @@ const TRACKS=[
  pads:[ {x:30,z:42,len:16},{x:10,z:-113,len:14},{x:130,z:-58,len:13} ],
  sand:[],
  bridges:[],
- boxes:[[50,42],[-40,-112],[135,-50]],
+ boxes:[ {x:50,z:42},{x:-40,z:-112},{x:135,z:-50} ],
  rocks:[ {at:[20,-113],lat:3.5},{at:[-30,-110],lat:-3.5},{at:[130,-50],lat:4} ],
  cones:[ {at:[125,5],lat:4.5},{at:[135,-18],lat:-4.5},{at:[108,22],lat:4} ],
  signs:[ {t:"KART RACING",bg:"#1d7a38",fg:"#fff",x:60,z:42},
@@ -328,31 +321,37 @@ const TRACKS=[
  theme:{ sky:0x8fd3ff,fog:0xa9e2ff,fogNear:150,fogFar:470,
    ground:0x3fae4a,road:0x43484f,edge:0xd8d8d8,pad:0xff8c2e,sandPatch:0x9b7c4a,wood:0x8a5a2b,
    base:0x2c7a35,water:false,tree:"pine",mountain:[0x6f9e6f,0x88a08a],
+   obstacle:"rock",cone:"cone",umbrellas:false,
    flowerColors:[0xff5d8f,0xffd23e,0xff4757,0xffffff,0x2e9bff],
    hemiSky:0xd8f0ff,hemiGround:0x3f7a3a,sun:0xfff3d6,offroad:"grass" }
 },
-{ /* ---------------- 1: PRAIA TROPICAL ---------------- */
+{ /* ---------------- 1: PRAIA TROPICAL (horário, sentido oposto) ----------------
+   Traçado bem diferente: S-chicane à direita, chicane inferior, grampo à esquerda,
+   dunas com rampas e píer. Curvas para a direita E para a esquerda. */
  name:"PRAIA TROPICAL", icon:"🏖️",
- cp:[[-60,60,0],[80,60,0],[150,35,0.6],[175,-30,1],[150,-90,3],[90,-118,6.5],[25,-125,4.5],[-40,-112,2],[-95,-85,1],[-145,-45,0.6],[-150,15,0],[-105,52,0]],
- fin:[10,60],
+ cp:[[-80,-95,3],[20,-105,4.5],[105,-120,6],[160,-90,4],[182,-30,2],[172,45,1],[130,72,0.6],[152,112,0.5],[92,142,0],[30,122,0],[-35,150,0],[-95,140,0],[-142,100,0.3],[-166,42,0.5],[-156,-28,1],[-122,-66,2]],
+ fin:[0,-105],
  shortcut:null,
  zones:[],
- ramps:[ {x:57,z:-122,r:7,pow:11},{x:-118,z:-64,r:5,pow:8} ],
- pads:[ {x:40,z:60,len:14},{x:165,z:-60,len:13},{x:-70,z:-98,len:12} ],
- sand:[ {x:160,z:-60,len:18},{x:-20,z:-118,len:16} ],   // trechos de areia fofa que reduzem velocidade
- bridges:[ {x:-95,z:-85,len:22} ],                       // pequena ponte / píer sobre a enseada
- boxes:[[60,60],[25,-125],[-140,-45]],
- rocks:[ {at:[90,-118],lat:3.5},{at:[-40,-112],lat:-3.5},{at:[165,-15],lat:4} ],
- cones:[ {at:[40,-120],lat:4},{at:[70,-120],lat:-4},{at:[170,-30],lat:4} ],
- signs:[ {t:"PRAIA TROPICAL",bg:"#0e8fd0",fg:"#fff",x:10,z:60},
-         {t:"ÁGUA DE COCO",bg:"#e09a00",fg:"#123",x:160,z:-20},
+ ramps:[ {x:70,z:-116,r:7,pow:11},{x:-140,z:-45,r:5,pow:8} ],
+ pads:[ {x:-20,z:-101,len:14},{x:177,z:-50,len:13},{x:-120,z:118,len:12} ],
+ sand:[ {x:175,z:-10,len:16},{x:0,z:135,len:16} ],
+ bridges:[ {x:-166,z:42,len:20} ],
+ boxes:[ {x:-50,z:-98,lats:[-4.5,-1.5,1.5,4.5]},
+         {x:178,z:-60,lats:[-3,0,3]},
+         {x:-65,z:145,lats:[-5,-2.5,0,2.5,5]} ],
+ rocks:[ {at:[160,-90],lat:3.5},{at:[130,72],lat:-3.5},{at:[30,122],lat:3.5},{at:[-166,42],lat:-3} ],
+ cones:[ {at:[105,-120],lat:4},{at:[92,142],lat:-4},{at:[-142,100],lat:4} ],
+ signs:[ {t:"PRAIA TROPICAL",bg:"#0e8fd0",fg:"#fff",x:-30,z:-100},
+         {t:"ÁGUA DE COCO",bg:"#e09a00",fg:"#123",x:178,z:5},
          {t:"CUIDADO: DUNAS",bg:"#ff7a1a",fg:"#fff",x:60,z:-122},
-         {t:"RADICAIS KIDS!",bg:"#ff5d8f",fg:"#fff",x:-145,z:-20},
-         {t:"PIER ➤",bg:"#8a5a2b",fg:"#ffd23e",x:-70,z:-95} ],
- grandstand:[40,60],
+         {t:"PIER ➤",bg:"#8a5a2b",fg:"#ffd23e",x:-160,z:60},
+         {t:"RADICAIS KIDS!",bg:"#ff5d8f",fg:"#fff",x:-140,z:120} ],
+ grandstand:[-30,-100],
  theme:{ sky:0x7ec8ff,fog:0xbfe6ff,fogNear:140,fogFar:460,
    ground:0xe6cf96,road:0xbfa263,edge:0xfff2cc,pad:0xff9d3e,sandPatch:0xeedfa8,wood:0x9a6a3f,
    base:0x1a6fc4,water:true,tree:"palm",mountain:null,
+   obstacle:"coral",cone:"buoy",umbrellas:true,
    flowerColors:[0xff8ac2,0xffd23e,0xffffff,0xff6f6f,0x7ee0c0],
    hemiSky:0xeaf6ff,hemiGround:0xc2a76a,sun:0xfff0c0,offroad:"sand" }
 }];
@@ -515,16 +514,27 @@ function placeFeatures(def){
  for(const p of def.pads){ const i0=idxNear(p.x,p.z); TRACK.pads.push({i0,i1:(i0+p.len)%N}); }
  for(const s of def.sand){ const i0=idxNear(s.x,s.z); TRACK.sand.push({i0,i1:(i0+s.len)%N}); }
  for(const b of def.bridges){ const i0=idxNear(b.x,b.z); TRACK.bridges.push({i0,i1:(i0+b.len)%N}); }
- for(const b of def.boxes){ const i=idxNear(b[0],b[1]),s=S[i];
-  for(const lat of[-4.5,-1.5,1.5,4.5]){ const p=s.p.clone().addScaledVector(s.n,lat); p.y+=1.15;
+ for(const b of def.boxes){ const i=idxNear(b.x,b.z),s=S[i];
+  const lats=b.lats||[-4.5,-1.5,1.5,4.5];
+  for(const lat of lats){ const p=s.p.clone().addScaledVector(s.n,lat); p.y+=1.15;
    TRACK.boxes.push({pos:p,active:true,t:0}); } }
  for(const r of def.rocks){ const s=S[idxNear(r.at[0],r.at[1])];
   const x=s.p.x+s.n.x*r.lat, z=s.p.z+s.n.z*r.lat;
   TRACK.obstacles.push({x,z,r:1.25,y:s.p.y,lastHit:-9}); }
- const coneGeo=new THREE.ConeGeometry(.35,.9,8);
+ const coneStyle=def.theme.cone||"cone";
  for(const c of def.cones){ const s=S[idxNear(c.at[0],c.at[1])];
   const x=s.p.x+s.n.x*c.lat, z=s.p.z+s.n.z*c.lat;
-  const m=new THREE.Mesh(coneGeo,MAT(0xff7a1a)); m.position.set(x,s.p.y+.45,z); raceScene.add(m);
+  let m;
+  if(coneStyle==="buoy"){
+   m=new THREE.Group();
+   const body=new THREE.Mesh(new THREE.SphereGeometry(.45,10,8),MAT(0xff5d5d)); m.add(body);
+   const band=new THREE.Mesh(new THREE.TorusGeometry(.45,.08,6,14),MAT(0xffffff)); band.rotation.x=PI/2; m.add(band);
+   m.position.set(x,s.p.y+.5,z);
+  } else {
+   m=new THREE.Mesh(new THREE.ConeGeometry(.35,.9,8),MAT(0xff7a1a));
+   m.position.set(x,s.p.y+.45,z);
+  }
+  raceScene.add(m);
   CONES.push({x,z,mesh:m,active:true,t:0}); }
 }
 function makeWaveTex(){ return canvasTex(128,128,g=>{ g.clearRect(0,0,128,128);
@@ -573,6 +583,21 @@ function buildTrees(theme){
    leaves.setColorAt(i,new THREE.Color().setHSL(.3+rnd(.09),.6,rnd(.3,.45))); }
   trunks.castShadow=leaves.castShadow=true; raceScene.add(trunks,leaves);
  }
+}
+function buildUmbrellas(){
+ const dummy=new THREE.Object3D();
+ const COUNT=12;
+ const poles=new THREE.InstancedMesh(new THREE.CylinderGeometry(.06,.06,1.6,6),MAT(0xd9c48a),COUNT);
+ const tops=new THREE.InstancedMesh(new THREE.ConeGeometry(1.1,.7,8),new THREE.MeshLambertMaterial({color:0xffffff,side:THREE.DoubleSide}),COUNT);
+ for(let i=0;i<COUNT;i++){ const si=Math.floor(rnd(N)),s=S[si];
+  const lat=(16+rnd(8))*(Math.random()<.5?1:-1);
+  const p=s.p.clone().addScaledVector(s.n,lat);
+  dummy.position.set(p.x,p.y+.8,p.z); dummy.rotation.set(0,0,rnd(-.1,.1)); dummy.scale.set(1,1,1);
+  dummy.updateMatrix(); poles.setMatrixAt(i,dummy.matrix);
+  dummy.position.set(p.x,p.y+1.7,p.z); dummy.rotation.set(0,rnd(TAU),rnd(-.15,.15));
+  dummy.updateMatrix(); tops.setMatrixAt(i,dummy.matrix);
+  tops.setColorAt(i,new THREE.Color([0xff6b6b,0xffd23e,0x4dabf7,0xff8ac2][i%4])); }
+ tops.castShadow=true; raceScene.add(poles,tops);
 }
 function buildFlowers(colors){
  const dummy=new THREE.Object3D();
@@ -630,7 +655,6 @@ function buildTrackVisual(def){
  geo.setIndex(idxArr); geo.computeVertexNormals();
  const ground=new THREE.Mesh(geo,new THREE.MeshLambertMaterial({vertexColors:true}));
  ground.receiveShadow=true; raceScene.add(ground);
- // base (grama ou oceano)
  const base=new THREE.Mesh(new THREE.CircleGeometry(600,24),MAT(theme.base));
  base.rotation.x=-PI/2; base.position.y=-3; raceScene.add(base);
  if(theme.water){
@@ -639,7 +663,6 @@ function buildTrackVisual(def){
   const water=new THREE.Mesh(new THREE.CircleGeometry(600,24),waterMat);
   water.rotation.x=-PI/2; water.position.y=-2.7; raceScene.add(water);
  } else waterMat=null;
- // linha de chegada + pórtico
  const finS=S[FIN];
  const finTex=canvasTex(128,64,g=>{ for(let y=0;y<4;y++)for(let x=0;x<8;x++){g.fillStyle=(x+y)%2?"#111":"#fff";g.fillRect(x*16,y*16,16,16);} });
  const fin=new THREE.Mesh(new THREE.PlaneGeometry(RW*2,3),
@@ -652,7 +675,6 @@ function buildTrackVisual(def){
  const banner=new THREE.Mesh(new THREE.BoxGeometry(RW*2+3,1.6,.4),MAT(0xff4757));
  banner.position.copy(finS.p); banner.position.y+=7.2;
  banner.rotation.y=Math.atan2(finS.th.x,finS.th.z); raceScene.add(banner);
- // barreiras
  { let cnt=0; for(let i=0;i<N;i+=2){ if(TRACK.wallP[i])cnt++; if(TRACK.wallN[i])cnt++; }
   const railGeo=new THREE.BoxGeometry(2.1,.55,.35);
   const rails=new THREE.InstancedMesh(railGeo,new THREE.MeshLambertMaterial({color:0xffffff}),Math.max(1,cnt));
@@ -665,7 +687,6 @@ function buildTrackVisual(def){
     dummy.updateMatrix(); rails.setMatrixAt(ri,dummy.matrix);
     rails.setColorAt(ri,new THREE.Color((i/2)%2?0xe8e8e8:0xff4757)); ri++; } }
   rails.count=ri; rails.castShadow=true; raceScene.add(rails); }
- // setas dos boost pads
  { const arrowTex=canvasTex(64,64,g=>{ g.fillStyle="#fff";
    g.beginPath();g.moveTo(12,50);g.lineTo(32,18);g.lineTo(52,50);g.lineTo(32,38);g.closePath();g.fill(); });
   for(const p of TRACK.pads){ const mid=(p.i0+Math.floor(((p.i1-p.i0+N)%N)/2))%N;
@@ -674,29 +695,34 @@ function buildTrackVisual(def){
      new THREE.MeshBasicMaterial({map:arrowTex,transparent:true,side:THREE.DoubleSide,depthWrite:false}));
     m.position.copy(s.p); m.position.y+=.6;
     m.rotation.set(-PI/2,0,-Math.atan2(s.th.x,s.th.z)); raceScene.add(m); } } }
- // rampas (cunhas)
  for(const r of TRACK.ramps){ const i=idxNear(r.x,r.z); const s=S[i];
   const wp=new Float32Array([ -3.2,0,-3.4, 3.2,0,-3.4, 3.2,1.25,3.4,  -3.2,0,-3.4, 3.2,1.25,3.4, -3.2,1.25,3.4,
    -3.2,0,-3.4, -3.2,1.25,3.4, -3.2,0,3.4,   3.2,0,-3.4, 3.2,0,3.4, 3.2,1.25,3.4 ]);
   const wg=new THREE.BufferGeometry(); wg.setAttribute("position",new THREE.BufferAttribute(wp,3)); wg.computeVertexNormals();
   const wm=new THREE.Mesh(wg,MAT(0xff5533)); wm.position.set(r.x,s.p.y,r.z);
   wm.rotation.y=Math.atan2(s.th.x,s.th.z); wm.castShadow=true; raceScene.add(wm); }
- // pilares das pontes
  for(const b of TRACK.bridges){ const len=((b.i1-b.i0+N)%N);
   for(let j=0;j<=len;j+=3){ const s=S[(b.i0+j)%N];
    for(const side of[1,-1]){ const p=s.p.clone().addScaledVector(s.n,side*(RW-0.6));
     const hgt=Math.max(0.5,s.p.y+2.6);
     const post=new THREE.Mesh(new THREE.CylinderGeometry(.18,.22,hgt,6),MAT(theme.wood));
     post.position.set(p.x,s.p.y-hgt/2+0.3,p.z); raceScene.add(post); } } }
- // pedras
- { const rockGeo=new THREE.DodecahedronGeometry(1.2);
-  for(const o of TRACK.obstacles){ const m=new THREE.Mesh(rockGeo,MAT(0x7d8087));
+ const obStyle=theme.obstacle||"rock";
+ for(const o of TRACK.obstacles){
+  if(obStyle==="coral"){
+   const grp=new THREE.Group();
+   const c1=new THREE.Mesh(new THREE.DodecahedronGeometry(1.0),MAT(0xff6f61)); c1.position.y=.5; grp.add(c1);
+   const c2=new THREE.Mesh(new THREE.DodecahedronGeometry(.6),MAT(0xff8f7a)); c2.position.set(.4,1.2,.2); grp.add(c2);
+   grp.position.set(o.x,o.y,o.z); grp.rotation.y=rnd(TAU); grp.castShadow=true;
+   raceScene.add(grp);
+  } else {
+   const m=new THREE.Mesh(new THREE.DodecahedronGeometry(1.2),MAT(0x7d8087));
    m.position.set(o.x,o.y+.55,o.z); m.rotation.set(rnd(TAU),rnd(TAU),0);
    m.castShadow=true; raceScene.add(m); } }
  buildTrees(theme);
+ if(theme.umbrellas)buildUmbrellas();
  buildFlowers(theme.flowerColors);
  buildSigns(def.signs);
- // arquibancada
  if(def.grandstand){ const stp=S[idxNear(def.grandstand[0],def.grandstand[1])];
   const stand=new THREE.Mesh(new THREE.BoxGeometry(22,6,5),MAT(0x556677));
   const sp=stp.p.clone().addScaledVector(stp.n,RAIL_LAT+7);
@@ -709,7 +735,6 @@ function buildTrackVisual(def){
   crowd.position.copy(stand.position); crowd.position.y+=.3;
   crowd.rotation.y=Math.atan2(stp.th.x,stp.th.z); crowd.translateZ(-2.6);
   raceScene.add(crowd); }
- // fundo: montanhas ou ilhas + sol + nuvens
  if(theme.mountain){ for(let i=0;i<14;i++){ const a=i/14*TAU, r2=rnd(300,380);
    const mtn=new THREE.Mesh(new THREE.ConeGeometry(rnd(40,80),rnd(50,110),6),MAT(theme.mountain[i%2]));
    mtn.position.set(5+Math.cos(a)*r2,-2,-35+Math.sin(a)*r2); raceScene.add(mtn); } }
@@ -819,7 +844,7 @@ function updateParticles(dt){
  pointsObj.geometry.attributes.color.needsUpdate=true;
 }
 
-/* ================= FÁBRICA DE KARTS (inalterada) ================= */
+/* ================= FÁBRICA DE KARTS ================= */
 const wheelGeo=new THREE.CylinderGeometry(.42,.42,.34,10); wheelGeo.rotateZ(PI/2);
 const wheelMat=MAT(0x1c1c22);
 function heartGeo(s,depth){ const sh=new THREE.Shape();
@@ -953,7 +978,7 @@ function buildKartVisual(ch){
 }
 
 /* ============================================================
- SIMULAÇÃO (física, colisão, IA, itens — inalterados)
+ SIMULAÇÃO
 ============================================================ */
 let karts=[],player=null,state="menu",pausedFrom=null,raceTime=0,cdT=0,msgT=0,resultsT=-1,acc=0;
 const L1=1.0,L2=2.1,L3=3.4;

@@ -81,11 +81,14 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #resTable tr.me td{color:#ffd23e}
 #resTable td.pos{font-size:18px;color:#fff;width:44px}
 .med1{color:#ffd700!important}.med2{color:#cfd8e6!important}.med3{color:#e0915a!important}
+
+/* ===== CONTROLES DE TOQUE ===== */
 #touch{position:fixed;inset:0;z-index:9;pointer-events:auto;touch-action:none}
 .tb{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:none;
   border-radius:50%;border:3px solid rgba(255,255,255,.4);background:rgba(10,25,45,.55);color:#fff;
   font-family:inherit;touch-action:none;box-shadow:0 4px 12px rgba(0,0,0,.4);transition:transform .05s,background .05s}
 .tb.on{background:rgba(80,220,130,.75);transform:scale(.92)}
+.tb.hudsel{outline:4px solid #ffd23e;outline-offset:2px}
 #tL{left:10px;bottom:22px;width:70px;height:70px;font-size:26px}
 #tR{left:88px;bottom:22px;width:70px;height:70px;font-size:26px}
 #tG{right:10px;bottom:56px;width:90px;height:90px;font-size:15px;letter-spacing:1px;background:rgba(40,160,70,.6)}
@@ -93,6 +96,22 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #tD{right:118px;bottom:22px;width:70px;height:70px;font-size:12px;background:rgba(55,120,220,.55)}
 #tI{right:124px;bottom:104px;width:58px;height:58px;font-size:11px;background:rgba(210,165,35,.6)}
 #tPause{right:8px;top:8px;width:50px;height:50px;font-size:20px;border-radius:12px;pointer-events:auto;background:rgba(10,25,45,.6)}
+
+/* ===== EDITOR DE HUD ===== */
+#hudEditPanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;
+  background:rgba(6,16,30,.95);border:3px solid #28527a;border-radius:16px;padding:16px;
+  width:min(360px,92vw);max-height:82vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+.hudedit-targets{display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.hudedit-targets .btn{font-size:11px;padding:6px 9px;margin:0}
+.hudedit-row{display:flex;align-items:center;gap:8px;color:#fff;font-size:13px}
+.hudedit-row label{min-width:78px;color:#9fd8ff}
+.hudedit-row input[type=range]{flex:1}
+#hudSelLabel{font-weight:bold;color:#ffd23e}
+.hudedit-nudge{justify-content:center}
+.nudge{width:46px;height:42px;font-size:18px;border-radius:10px;border:3px solid #06121f;
+  background:linear-gradient(180deg,#3aa0ff,#1a5fc4);color:#fff;cursor:pointer}
+.hudedit-hint{color:#ffd23e;font-size:12px;text-align:center}
+
 #fps{position:fixed;left:8px;bottom:4px;color:#ffffff55;font-size:10px;z-index:5;font-family:monospace}
 #err{position:fixed;left:8px;bottom:20px;right:8px;color:#ff8080;font-size:11px;z-index:99;font-family:monospace;display:none;background:#0008;padding:4px}
 #dbg{position:fixed;top:70px;left:14px;z-index:15;color:#7CFC00;font:11px monospace;background:#000a;padding:8px;border-radius:8px;display:none;pointer-events:none;white-space:pre;line-height:1.5}
@@ -205,8 +224,27 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
   <h2>CONFIGURAÇÕES</h2>
   <button class="btn small blue" id="btnSom">SOM: LIGADO</button>
   <button class="btn small blue" id="btnSombra">SOMBRAS: LIGADO</button><br>
+  <button class="btn small yellow hidden" id="btnHudEdit">📱 AJUSTAR CONTROLES (TOQUE)</button><br>
   <button class="btn small" id="btnSetBack">VOLTAR</button>
 </div></div>
+
+<!-- EDITOR DE HUD -->
+<div id="hudEditPanel" class="hidden">
+  <div class="hudedit-targets" id="hudTargets"></div>
+  <div class="hudedit-row"><span id="hudSelLabel">Todos os botões</span></div>
+  <div class="hudedit-row"><label>Tamanho</label><input type="range" id="hudSizeRange" min="50" max="180" value="100"></div>
+  <div class="hudedit-row"><label>Opacidade</label><input type="range" id="hudOpacityRange" min="20" max="100" value="100"></div>
+  <div class="hudedit-row hudedit-nudge">
+    <button class="nudge" id="nudL">◀</button><button class="nudge" id="nudU">▲</button>
+    <button class="nudge" id="nudD">▼</button><button class="nudge" id="nudR">▶</button>
+  </div>
+  <div class="hudedit-row">
+    <button class="btn small" id="hudSave">SALVAR</button>
+    <button class="btn small blue" id="hudReset">PADRÃO</button>
+    <button class="btn small red" id="hudCancel">CANCELAR</button>
+  </div>
+  <div class="hudedit-hint">Arraste os botões na tela para reposicionar</div>
+</div>
 
 <div id="touch" class="hidden">
   <div class="tb" id="tPause">⏸</div>
@@ -250,6 +288,111 @@ function mergeGeoms(list){let total=0;
  const out=new THREE.BufferGeometry();out.setAttribute("position",new THREE.BufferAttribute(pos,3));
  out.computeVertexNormals();return out}
 
+/* ============================================================
+ EDITOR DE HUD (controles de toque) — tamanho, opacidade, posição
+============================================================ */
+const HUD_BASE={
+ tL:{size:70,font:26}, tR:{size:70,font:26}, tD:{size:70,font:12},
+ tG:{size:90,font:15}, tB:{size:58,font:11}, tI:{size:58,font:11}, tPause:{size:50,font:20}
+};
+const HUD_LABEL={tL:"Esquerda ◀",tR:"Direita ▶",tG:"Gás",tB:"Freio",tD:"Drift",tI:"Item",tPause:"Pausa ⏸"};
+function defaultHudConfig(){ return {
+ tL:{x:0.11,y:0.90,size:1,opacity:1},
+ tR:{x:0.30,y:0.90,size:1,opacity:1},
+ tD:{x:0.60,y:0.92,size:1,opacity:1},
+ tG:{x:0.87,y:0.85,size:1,opacity:1},
+ tB:{x:0.90,y:0.70,size:1,opacity:1},
+ tI:{x:0.62,y:0.80,size:1,opacity:1},
+ tPause:{x:0.93,y:0.08,size:1,opacity:1}
+};}
+let hudConfig=defaultHudConfig();
+let hudBackup=null, hudEditActive=false, selectedHud=null, hudDrag=null;
+function loadHudConfig(){
+ let cfg=null;
+ try{ const raw=localStorage.getItem("kartRacing_hudLayout"); if(raw)cfg=JSON.parse(raw); }catch(e){cfg=null;}
+ const def=defaultHudConfig();
+ if(!cfg)cfg=def; else for(const id in def){ if(!cfg[id])cfg[id]=def[id]; }
+ return cfg;
+}
+function saveHudConfig(){ try{localStorage.setItem("kartRacing_hudLayout",JSON.stringify(hudConfig));}catch(e){} }
+function applyHudLayout(){
+ for(const id in HUD_BASE){
+  const el=document.getElementById(id); if(!el)continue;
+  const c=hudConfig[id]; if(!c)continue;
+  const base=HUD_BASE[id];
+  const size=base.size*c.size;
+  el.style.position="absolute";
+  el.style.left=(c.x*W-size/2)+"px";
+  el.style.top=(c.y*H-size/2)+"px";
+  el.style.right="auto"; el.style.bottom="auto";
+  el.style.width=size+"px"; el.style.height=size+"px";
+  el.style.opacity=c.opacity;
+  el.style.fontSize=(base.font*c.size)+"px";
+ }
+}
+function clearHudSel(){ for(const b in HUD_BASE){ const el=document.getElementById(b); if(el)el.classList.remove("hudsel"); } }
+function updateHudSelLabel(){ $("hudSelLabel").textContent=selectedHud?HUD_LABEL[selectedHud]:"Todos os botões"; }
+function selectHudBtn(id){
+ selectedHud=id; clearHudSel();
+ const el=document.getElementById(id); if(el)el.classList.add("hudsel");
+ $("hudSizeRange").value=Math.round(hudConfig[id].size*100);
+ $("hudOpacityRange").value=Math.round(hudConfig[id].opacity*100);
+ updateHudSelLabel();
+}
+function selectAllHud(){
+ selectedHud=null; clearHudSel();
+ $("hudSizeRange").value=100; $("hudOpacityRange").value=100;
+ updateHudSelLabel();
+}
+function applyToSelOrAll(fn){
+ if(selectedHud)fn(hudConfig[selectedHud]);
+ else for(const id in hudConfig)fn(hudConfig[id]);
+}
+function nudgeHud(dx,dy){
+ applyToSelOrAll(c=>{ c.x=clamp(c.x+dx,0.02,0.98); c.y=clamp(c.y+dy,0.02,0.98); });
+ applyHudLayout();
+}
+function buildHudTargets(){
+ const cont=$("hudTargets"); cont.innerHTML="";
+ const mk=(label,id)=>{ const b=document.createElement("button"); b.className="btn small blue"; b.textContent=label;
+  b.onclick=()=>{ if(id)selectHudBtn(id); else selectAllHud(); }; cont.appendChild(b); };
+ mk("◀","tL"); mk("▶","tR"); mk("GÁS","tG"); mk("FREIO","tB");
+ mk("DRIFT","tD"); mk("ITEM","tI"); mk("⏸","tPause"); mk("TODOS",null);
+}
+function setupHudEdit(){
+ for(const id in HUD_BASE){
+  const el=document.getElementById(id); if(!el)continue;
+  el.addEventListener("pointerdown",e=>{
+   if(!hudEditActive)return;
+   e.preventDefault(); e.stopPropagation();
+   selectHudBtn(id);
+   hudDrag={id,sx:e.clientX,sy:e.clientY,ox:hudConfig[id].x,oy:hudConfig[id].y,moved:false};
+   try{el.setPointerCapture(e.pointerId);}catch(_){}
+  });
+  el.addEventListener("pointermove",e=>{
+   if(!hudEditActive||!hudDrag||hudDrag.id!==id)return;
+   const dx=(e.clientX-hudDrag.sx)/W, dy=(e.clientY-hudDrag.sy)/H;
+   if(Math.abs(dx)>0.005||Math.abs(dy)>0.005)hudDrag.moved=true;
+   hudConfig[id].x=clamp(hudDrag.ox+dx,0.02,0.98);
+   hudConfig[id].y=clamp(hudDrag.oy+dy,0.02,0.98);
+   applyHudLayout();
+  });
+  el.addEventListener("pointerup",e=>{ if(hudDrag&&hudDrag.id===id)hudDrag=null; });
+  el.addEventListener("pointercancel",e=>{ if(hudDrag&&hudDrag.id===id)hudDrag=null; });
+ }
+}
+function enterHudEdit(){
+ hudEditActive=true; hudBackup=JSON.parse(JSON.stringify(hudConfig));
+ show("settings",false); show("menu",false);
+ show("hudEditPanel",true); show("touch",true);
+ applyHudLayout(); selectAllHud();
+}
+function exitHudEdit(){
+ hudEditActive=false; hudDrag=null; selectedHud=null; clearHudSel();
+ show("hudEditPanel",false); show("touch",false);
+ show("settings",true);
+}
+
 /* ================= DADOS ================= */
 const TYPES={
 1:{n:"VELOCISTA",v:10,a:7,c:5,f:4,d:6,g:5},
@@ -292,13 +435,9 @@ const ITEM_NAME={turbo:"TURBO",banana:"BANANA",bomba:"BOMBA",projetil:"PROJÉTIL
 const settings={som:true,sombras:true,diff:"normal"};
 let selChar=1, selTrack=0;
 
-/* ============================================================
- DEFINIÇÃO DAS PISTAS — cada uma com traçado, sentido, itens e
- obstáculos próprios. NÃO remover; apenas adicionar novas.
-============================================================ */
+/* ================= PISTAS ================= */
 const TRACKS=[
-{ /* ---------------- 0: CIRCUITO VERDE (anti-horário) ---------------- */
- name:"CIRCUITO VERDE", icon:"🌿",
+{ name:"CIRCUITO VERDE", icon:"🌿",
  cp:[[-20,42,0],[70,42,0],[122,18,1],[142,-34,4],[116,-88,9],[55,-114,12],[-15,-112,10],[-72,-88,6],[-112,-46,3],[-128,2,1],[-92,32,0.3]],
  fin:[10,42],
  shortcut:{gA:[-118,2],gB:[-42,41],P:[-82,18]},
@@ -307,8 +446,7 @@ const TRACKS=[
          {at:[120,-95],lat:8,r:7,surf:"sand"},{at:[-80,-90],lat:8,r:7,surf:"mud"} ],
  ramps:[ {x:20,z:-113,r:7,pow:11},{x:-86,z:24,r:5,pow:7} ],
  pads:[ {x:30,z:42,len:16},{x:10,z:-113,len:14},{x:130,z:-58,len:13} ],
- sand:[],
- bridges:[],
+ sand:[], bridges:[],
  boxes:[ {x:50,z:42},{x:-40,z:-112},{x:135,z:-50} ],
  rocks:[ {at:[20,-113],lat:3.5},{at:[-30,-110],lat:-3.5},{at:[130,-50],lat:4} ],
  cones:[ {at:[125,5],lat:4.5},{at:[135,-18],lat:-4.5},{at:[108,22],lat:4} ],
@@ -325,14 +463,9 @@ const TRACKS=[
    flowerColors:[0xff5d8f,0xffd23e,0xff4757,0xffffff,0x2e9bff],
    hemiSky:0xd8f0ff,hemiGround:0x3f7a3a,sun:0xfff3d6,offroad:"grass" }
 },
-{ /* ---------------- 1: PRAIA TROPICAL (horário, sentido oposto) ----------------
-   Traçado bem diferente: S-chicane à direita, chicane inferior, grampo à esquerda,
-   dunas com rampas e píer. Curvas para a direita E para a esquerda. */
- name:"PRAIA TROPICAL", icon:"🏖️",
+{ name:"PRAIA TROPICAL", icon:"🏖️",
  cp:[[-80,-95,3],[20,-105,4.5],[105,-120,6],[160,-90,4],[182,-30,2],[172,45,1],[130,72,0.6],[152,112,0.5],[92,142,0],[30,122,0],[-35,150,0],[-95,140,0],[-142,100,0.3],[-166,42,0.5],[-156,-28,1],[-122,-66,2]],
- fin:[0,-105],
- shortcut:null,
- zones:[],
+ fin:[0,-105], shortcut:null, zones:[],
  ramps:[ {x:70,z:-116,r:7,pow:11},{x:-140,z:-45,r:5,pow:8} ],
  pads:[ {x:-20,z:-101,len:14},{x:177,z:-50,len:13},{x:-120,z:118,len:12} ],
  sand:[ {x:175,z:-10,len:16},{x:0,z:135,len:16} ],
@@ -403,7 +536,7 @@ const AU={ctx:null,master:null,eng:null,engG:null,eng2:null,skidG:null,started:f
 const input={gas:false,brake:false,left:false,right:false,drift:false,itemQ:false};
 const KEYMAP={KeyW:"gas",ArrowUp:"gas",KeyS:"brake",ArrowDown:"brake",KeyA:"left",ArrowLeft:"left",KeyD:"right",ArrowRight:"right",Space:"drift",ShiftLeft:"drift",ShiftRight:"drift"};
 addEventListener("keydown",e=>{ AU.init();AU.resume();
- if(e.code==="Escape"){ togglePause(); return; }
+ if(e.code==="Escape"){ if(!hudEditActive)togglePause(); return; }
  if(e.code==="F3"){ DEBUG=!DEBUG; const dg=document.getElementById("dbg"); dg.style.display=DEBUG?"block":"none";
   if(debugGroup)debugGroup.visible=DEBUG; e.preventDefault(); return; }
  if(KEYMAP[e.code]!==undefined){ input[KEYMAP[e.code]]=true; e.preventDefault(); }
@@ -425,36 +558,37 @@ function bindTouchControls(){
   setOn("tL",st.left); setOn("tR",st.right); setOn("tG",st.gas); setOn("tB",st.brake); setOn("tD",st.drift); }
  function flash(id){ setOn(id,true); setTimeout(()=>setOn(id,false),160); }
  if(window.PointerEvent){
-  function onDown(e){ e.preventDefault(); AU.init(); AU.resume();
+  function onDown(e){ if(hudEditActive){ selectAllHud(); return; }
+   e.preventDefault(); AU.init(); AU.resume();
    const hit=buttonAt(e.clientX,e.clientY); if(!hit)return;
    if(hit==="item"){ input.itemQ=true; flash("tI"); return; }
    held[e.pointerId]=hit; recompute(); }
-  function onMove(e){ if(held[e.pointerId]===undefined)return;
+  function onMove(e){ if(hudEditActive)return; if(held[e.pointerId]===undefined)return;
    const hit=buttonAt(e.clientX,e.clientY);
    if(hit!==held[e.pointerId]){ if(hit==="item"){ delete held[e.pointerId]; input.itemQ=true; flash("tI"); }
     else held[e.pointerId]=hit; recompute(); } }
-  function onUp(e){ if(held[e.pointerId]===undefined)return; delete held[e.pointerId]; recompute(); }
+  function onUp(e){ if(hudEditActive)return; if(held[e.pointerId]===undefined)return; delete held[e.pointerId]; recompute(); }
   layer.addEventListener("pointerdown",onDown);
   layer.addEventListener("pointermove",onMove);
   layer.addEventListener("pointerup",onUp);
   layer.addEventListener("pointercancel",onUp);
  } else {
-  function tDown(e){ e.preventDefault(); AU.init(); AU.resume();
+  function tDown(e){ if(hudEditActive)return; e.preventDefault(); AU.init(); AU.resume();
    for(const t of e.changedTouches){ const hit=buttonAt(t.clientX,t.clientY);
     if(hit==="item"){ input.itemQ=true; flash("tI"); }
     else if(hit){ held[t.identifier]=hit; } } recompute(); }
-  function tUp(e){ for(const t of e.changedTouches){ delete held[t.identifier]; } recompute(); }
+  function tUp(e){ if(hudEditActive)return; for(const t of e.changedTouches){ delete held[t.identifier]; } recompute(); }
   layer.addEventListener("touchstart",tDown,{passive:false});
   layer.addEventListener("touchend",tUp,{passive:false});
   layer.addEventListener("touchcancel",tUp,{passive:false});
  }
  layer.addEventListener("contextmenu",e=>e.preventDefault());
  const pb=document.getElementById("tPause");
- if(pb){ const h=e=>{ e.preventDefault(); e.stopPropagation(); AU.init(); AU.resume(); togglePause(); };
+ if(pb){ const h=e=>{ if(hudEditActive)return; e.preventDefault(); e.stopPropagation(); AU.init(); AU.resume(); togglePause(); };
   pb.addEventListener("pointerdown",h);
   if(!window.PointerEvent)pb.addEventListener("touchstart",h,{passive:false}); }
 }
-if(isTouch)bindTouchControls();
+if(isTouch){ bindTouchControls(); setupHudEdit(); }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden&&(state==="race"||state==="count"))togglePause(); });
 
 /* ================= THREE ================= */
@@ -467,12 +601,10 @@ function initThree(){
  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  cam.position.set(0,80,160);
  addEventListener("resize",()=>{ W=innerWidth;H=innerHeight; cam.aspect=W/H; cam.updateProjectionMatrix(); renderer.setSize(W,H);
-  if(state==="select")frameSelectCamera(); });
+  if(state==="select")frameSelectCamera(); applyHudLayout(); });
 }
 
-/* ============================================================
- CONSTRUÇÃO DE PISTA (dirigida por dados)
-============================================================ */
+/* ================= CONSTRUÇÃO DE PISTA ================= */
 let N=720, S=[], FIN=0, cpIdx=[], K=12, cpPose=[];
 const TRACK={zones:[],ramps:[],pads:[],sand:[],bridges:[],boxes:[],obstacles:[],wallP:[],wallN:[]};
 let sun,flagMeshes=[],clouds=[],debugGroup=null,trauma=0;
@@ -480,7 +612,6 @@ let currentTrack=0, defaultOffroad="grass", waterMat=null, boxMeshes=[];
 window.CONES=[];
 const idxNear=(x,z)=>{let bi=0,bd=1e9;for(let i=0;i<N;i++){const dx=S[i].p.x-x,dz=S[i].p.z-z,d=dx*dx+dz*dz;if(d<bd){bd=d;bi=i}}return bi};
 function addTrauma(v){ trauma=Math.min(.55,trauma+v); }
-
 function buildSamples(cp){
  S=[];
  const pts=cp.map(p=>new THREE.Vector3(p[0],p[2],p[1]));
@@ -545,9 +676,7 @@ function makePalmHeadGeo(){
  const parts=[]; const n=7;
  for(let i=0;i<n;i++){ const a=i/n*TAU;
   const frond=new THREE.ConeGeometry(0.3,2.6,4);
-  frond.translate(0,1.3,0);
-  frond.rotateX(PI/2+0.5);
-  frond.rotateY(a);
+  frond.translate(0,1.3,0); frond.rotateX(PI/2+0.5); frond.rotateY(a);
   parts.push(frond); }
  parts.push(new THREE.SphereGeometry(0.35,6,5));
  return mergeGeoms(parts);
@@ -977,9 +1106,7 @@ function buildKartVisual(ch){
  return {g,wheels,fronts,shield};
 }
 
-/* ============================================================
- SIMULAÇÃO
-============================================================ */
+/* ================= SIMULAÇÃO ================= */
 let karts=[],player=null,state="menu",pausedFrom=null,raceTime=0,cdT=0,msgT=0,resultsT=-1,acc=0;
 const L1=1.0,L2=2.1,L3=3.4;
 function statsFor(type){ const t=TYPES[type];
@@ -1478,7 +1605,7 @@ function updateDebug(){
 /* ================= TELAS ================= */
 function show(id,on){ $(id).classList.toggle("hidden",!on); }
 function toMenu(){ clearRace(); state="menu"; show("menu",true); show("select",false); show("hud",false);
- show("results",false); show("pause",false); show("touch",false); AU.engineOff(); }
+ show("results",false); show("pause",false); show("touch",false); show("hudEditPanel",false); hudEditActive=false; AU.engineOff(); }
 function toSelect(){ clearRace(); state="select"; show("menu",false); show("select",true); show("hud",false);
  show("results",false); show("touch",false); AU.engineOff();
  initSelectScene(); selectChar(selChar); }
@@ -1499,9 +1626,9 @@ function startRace(){
   const k=makeKart(ch,isP,slot,settings.diff); karts.push(k); if(isP)player=k; });
  computeRanks();
  state="count"; cdT=0; lastLapTxt="";lastPosTxt="";lastItem="";
- show("select",false); show("menu",false); show("results",false); show("pause",false);
+ show("select",false); show("menu",false); show("results",false); show("pause",false); show("hudEditPanel",false);
  show("hud",true); show("count",true);
- if(isTouch)show("touch",true);
+ if(isTouch){ show("touch",true); applyHudLayout(); }
  const el=$("count"); el.textContent=""; el.style.color=""; el.dataset.go="";
  showMsg(TRACKS[selTrack].icon+" "+TRACKS[selTrack].name,1600);
  updateCamera(1,performance.now()); }
@@ -1580,6 +1707,21 @@ function bindUI(){
  $("btnSoonOk").onclick=()=>show("soon",false);
  $("btnSelBack").onclick=toMenu;
  $("btnCorrer").onclick=()=>{AU.init();AU.resume();startRace();};
+ if(isTouch){
+  $("btnHudEdit").classList.remove("hidden");
+  $("btnHudEdit").onclick=()=>{ show("settings",false); enterHudEdit(); };
+ } else { $("btnHudEdit").classList.add("hidden"); }
+ // editor de HUD
+ $("hudSave").onclick=()=>{ saveHudConfig(); exitHudEdit(); };
+ $("hudReset").onclick=()=>{ hudConfig=defaultHudConfig(); applyHudLayout(); };
+ $("hudCancel").onclick=()=>{ if(hudBackup)hudConfig=hudBackup; applyHudLayout(); exitHudEdit(); };
+ $("hudSizeRange").oninput=e=>{ const v=+e.target.value/100;
+  applyToSelOrAll(c=>c.size=v); applyHudLayout(); };
+ $("hudOpacityRange").oninput=e=>{ const v=+e.target.value/100;
+  applyToSelOrAll(c=>c.opacity=v); applyHudLayout(); };
+ $("nudL").onclick=()=>nudgeHud(-0.02,0); $("nudR").onclick=()=>nudgeHud(0.02,0);
+ $("nudU").onclick=()=>nudgeHud(0,-0.02); $("nudD").onclick=()=>nudgeHud(0,0.02);
+ buildHudTargets();
  document.querySelectorAll("[data-diff]").forEach(b=>b.onclick=()=>{
   settings.diff=b.dataset.diff;
   document.querySelectorAll("[data-diff]").forEach(x=>x.classList.toggle("sel",x===b));
@@ -1676,6 +1818,8 @@ function boot(){
  initParticles();
  buildWorld(0);
  bindUI();
+ hudConfig=loadHudConfig();
+ applyHudLayout();
  if(isTouch){ const h=document.getElementById("menuHint");
   if(h)h.textContent="Toque em JOGAR · use os botões na tela para acelerar, virar e driftar"; }
  toMenu();

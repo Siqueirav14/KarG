@@ -417,10 +417,10 @@ const settings={som:true,sombras:true,diff:"normal"};
 let selChar=1, selTrack=0;
 
 /* ============================================================
- PISTAS — COPA VERDE (nível 1, 2 e 3)
+ PISTAS — COPA VERDE (dificuldade crescente: 1 < 2 < 3)
 ============================================================ */
 const TRACKS=[
-{ /* ---- NÍVEL 1: CIRCUITO VERDE ---- */
+{ /* ---- NÍVEL 1: CIRCUITO VERDE (mais fácil) ---- */
  name:"CIRCUITO VERDE", icon:"🌿",
  cp:[[-20,42,0],[70,42,0],[122,18,1],[142,-34,4],[116,-88,9],[55,-114,12],[-15,-112,10],[-72,-88,6],[-112,-46,3],[-128,2,1],[-92,32,0.3]],
  fin:[10,42],
@@ -447,7 +447,7 @@ const TRACKS=[
    flowerColors:[0xff5d8f,0xffd23e,0xff4757,0xffffff,0x2e9bff],
    hemiSky:0xd8f0ff,hemiGround:0x3f7a3a,sun:0xfff3d6,offroad:"grass" }
 },
-{ /* ---- NÍVEL 2: PRAIA TROPICAL ---- */
+{ /* ---- NÍVEL 2: PRAIA TROPICAL (intermediário) ---- */
  name:"PRAIA TROPICAL", icon:"🏖️",
  cp:[[-80,-95,3],[20,-105,4.5],[105,-120,6],[160,-90,4],[182,-30,2],[172,45,1],[130,72,0.6],[152,112,0.5],[92,142,0],[30,122,0],[-35,150,0],[-95,140,0],[-142,100,0.3],[-166,42,0.5],[-156,-28,1],[-122,-66,2]],
  fin:[0,-105], shortcut:null, zones:[],
@@ -458,7 +458,8 @@ const TRACKS=[
  boxes:[ {x:-50,z:-98,lats:[-4.5,-1.5,1.5,4.5]},
          {x:178,z:-60,lats:[-3,0,3]},
          {x:-65,z:145,lats:[-5,-2.5,0,2.5,5]} ],
- rocks:[ {at:[160,-90],lat:3.5},{at:[130,72],lat:-3.5},{at:[30,122],lat:3.5},{at:[-166,42],lat:-3} ],
+ rocks:[ {at:[160,-90],lat:3.5},{at:[130,72],lat:-3.5},{at:[30,122],lat:3.5},{at:[-166,42],lat:-3},
+         {at:[175,-50],lat:-2.5},{at:[80,130],lat:2.5} ],
  cones:[ {at:[105,-120],lat:4},{at:[92,142],lat:-4},{at:[-142,100],lat:4} ],
  signs:[ {t:"PRAIA TROPICAL",bg:"#0e8fd0",fg:"#fff",x:-30,z:-100},
          {t:"ÁGUA DE COCO",bg:"#e09a00",fg:"#123",x:178,z:5},
@@ -473,9 +474,9 @@ const TRACKS=[
    flowerColors:[0xff8ac2,0xffd23e,0xffffff,0xff6f6f,0x7ee0c0],
    hemiSky:0xeaf6ff,hemiGround:0xc2a76a,sun:0xfff0c0,offroad:"sand" }
 },
-{ /* ---- NÍVEL 3: FAZENDA MALUCA ---- */
+{ /* ---- NÍVEL 3: FAZENDA MALUCA (mais difícil: chicane fechado + muitos obstáculos) ---- */
  name:"FAZENDA MALUCA", icon:"🚜",
- cp:[[-20,75,0],[70,75,0],[130,55,0.5],[155,0,1],[130,-55,1.5],[75,-90,2],[30,-80,1.5],[-10,-100,1],[-60,-85,1],[-110,-60,0.5],[-130,-10,0],[-115,40,0],[-75,65,0]],
+ cp:[[-20,75,0],[70,75,0],[130,55,0.5],[155,0,1],[130,-55,1.5],[75,-90,2],[32,-68,1.5],[-8,-112,1],[-60,-85,1],[-110,-60,0.5],[-130,-10,0],[-115,40,0],[-75,65,0]],
  fin:[25,75],
  shortcut:{gA:[-125,-40],gB:[-115,15],P:[-95,-12]},
  zones:[ {x:-120,z:-28,r:7,surf:"dirt"},{x:-105,z:-12,r:9,surf:"dirt"},{x:-112,z:4,r:7,surf:"dirt"} ],
@@ -486,8 +487,17 @@ const TRACKS=[
  boxes:[ {x:60,z:75,lats:[-4.5,-1.5,1.5,4.5]},
          {x:155,z:0,lats:[-3,0,3]},
          {x:-90,z:-70,lats:[-5,-2.5,0,2.5,5]} ],
- rocks:[ {at:[130,-55],lat:3.5},{at:[75,-90],lat:-3.5},{at:[-115,40],lat:3.5},{at:[155,0],lat:-3} ],
- cones:[ {at:[100,45],lat:4},{at:[-130,-10],lat:-4},{at:[30,-80],lat:4} ],
+ rocks:[ {at:[130,-55],lat:3.5},
+         {at:[100,-75],lat:-2.5},
+         {at:[75,-90],lat:-3.5},
+         {at:[40,-75],lat:2.0},
+         {at:[0,-100],lat:-2.0},
+         {at:[-35,-90],lat:3.0},
+         {at:[-90,-70],lat:-2.5},
+         {at:[-115,40],lat:3.5},
+         {at:[155,0],lat:-3} ],
+ cones:[ {at:[100,45],lat:4},{at:[-130,-10],lat:-4},{at:[30,-80],lat:4},
+         {at:[55,-85],lat:-3},{at:[-20,-95],lat:3},{at:[-75,-75],lat:-3},{at:[120,-65],lat:3} ],
  signs:[ {t:"FAZENDA MALUCA",bg:"#b03a2e",fg:"#fff",x:20,z:75},
          {t:"FENO FRESCO",bg:"#d8b45a",fg:"#5a3a1a",x:140,z:-30},
          {t:"CUIDADO: VACAS",bg:"#fff",fg:"#b03a2e",x:-90,z:-70},
@@ -780,7 +790,6 @@ function buildSigns(signs){
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,3,6),MAT(0x888888));
   pole.position.set(p.x,s.p.y+1.5,p.z); raceScene.add(m,pole); }
 }
-/* ---- decorações da FAZENDA ---- */
 function buildFenceRect(cx,cz,w,h){
  const posts=[]; const step=4;
  for(let x=cx-w/2;x<=cx+w/2;x+=step){ posts.push([x,cz-h/2]); posts.push([x,cz+h/2]); }

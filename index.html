@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>KART RACING — Circuito Verde & Praia Tropical</title>
+<title>KART RACING — Copa Verde</title>
 <style>
 :root{ --verde:#3ddc55; --amarelo:#ffd23e; --vermelho:#ff4757; --azul:#2e9bff; --painel:rgba(10,22,40,.82); }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-touch-callout:none}
@@ -81,8 +81,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #resTable tr.me td{color:#ffd23e}
 #resTable td.pos{font-size:18px;color:#fff;width:44px}
 .med1{color:#ffd700!important}.med2{color:#cfd8e6!important}.med3{color:#e0915a!important}
-
-/* ===== CONTROLES DE TOQUE ===== */
 #touch{position:fixed;inset:0;z-index:9;pointer-events:auto;touch-action:none}
 .tb{position:absolute;display:flex;align-items:center;justify-content:center;pointer-events:none;
   border-radius:50%;border:3px solid rgba(255,255,255,.4);background:rgba(10,25,45,.55);color:#fff;
@@ -96,8 +94,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #tD{right:118px;bottom:22px;width:70px;height:70px;font-size:12px;background:rgba(55,120,220,.55)}
 #tI{right:124px;bottom:104px;width:58px;height:58px;font-size:11px;background:rgba(210,165,35,.6)}
 #tPause{right:8px;top:8px;width:50px;height:50px;font-size:20px;border-radius:12px;pointer-events:auto;background:rgba(10,25,45,.6)}
-
-/* ===== EDITOR DE HUD ===== */
 #hudEditPanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;
   background:rgba(6,16,30,.95);border:3px solid #28527a;border-radius:16px;padding:16px;
   width:min(360px,92vw);max-height:82vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
@@ -111,7 +107,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 .nudge{width:46px;height:42px;font-size:18px;border-radius:10px;border:3px solid #06121f;
   background:linear-gradient(180deg,#3aa0ff,#1a5fc4);color:#fff;cursor:pointer}
 .hudedit-hint{color:#ffd23e;font-size:12px;text-align:center}
-
 #fps{position:fixed;left:8px;bottom:4px;color:#ffffff55;font-size:10px;z-index:5;font-family:monospace}
 #err{position:fixed;left:8px;bottom:20px;right:8px;color:#ff8080;font-size:11px;z-index:99;font-family:monospace;display:none;background:#0008;padding:4px}
 #dbg{position:fixed;top:70px;left:14px;z-index:15;color:#7CFC00;font:11px monospace;background:#000a;padding:8px;border-radius:8px;display:none;pointer-events:none;white-space:pre;line-height:1.5}
@@ -159,7 +154,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 <div id="menu" class="screen">
   <div class="checker" style="position:absolute;top:0"></div>
   <div class="logo">KART<span>RACING</span></div>
-  <div class="sub">★ CIRCUITO VERDE · PRAIA TROPICAL ★</div>
+  <div class="sub">★ COPA VERDE ★</div>
   <div class="col">
     <button class="btn yellow" id="btnJogar">JOGAR</button>
     <button class="btn" id="btnCamp">CAMPEONATO</button>
@@ -185,10 +180,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
   <div id="selBottom">
     <div class="panel" id="charGrid"></div>
     <div id="selActions">
-      <div id="trackRow">
-        <button class="btn small blue track sel" data-track="0">🌿 CIRCUITO VERDE</button>
-        <button class="btn small yellow track" data-track="1">🏖️ PRAIA TROPICAL</button>
-      </div>
+      <div id="trackRow"></div>
       <div id="diffRow">
         <button class="btn small" data-diff="facil">FÁCIL</button>
         <button class="btn small sel" data-diff="normal">NORMAL</button>
@@ -228,7 +220,6 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
   <button class="btn small" id="btnSetBack">VOLTAR</button>
 </div></div>
 
-<!-- EDITOR DE HUD -->
 <div id="hudEditPanel" class="hidden">
   <div class="hudedit-targets" id="hudTargets"></div>
   <div class="hudedit-row"><span id="hudSelLabel">Todos os botões</span></div>
@@ -264,11 +255,9 @@ addEventListener("error",e=>{const d=document.getElementById("err");if(d){d.styl
 document.addEventListener("gesturestart",e=>e.preventDefault());
 document.addEventListener("dblclick",e=>e.preventDefault());
 
-/* ================= CONSTANTES ================= */
 const STEP=1/60, RAIL_LAT=14, OPEN_LAT=24, WT=28, RW=7.5, MAX_BOOST_SPEED=50, KART_R=1.3;
 let DEBUG=false;
 
-/* ================= UTILIDADES ================= */
 const PI=Math.PI, TAU=PI*2;
 const clamp=(v,a,b)=>v<a?a:v>b?b:v;
 const rnd=(a=1,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
@@ -288,21 +277,16 @@ function mergeGeoms(list){let total=0;
  const out=new THREE.BufferGeometry();out.setAttribute("position",new THREE.BufferAttribute(pos,3));
  out.computeVertexNormals();return out}
 
-/* ============================================================
- EDITOR DE HUD (controles de toque) — tamanho, opacidade, posição
-============================================================ */
+/* ================= EDITOR DE HUD ================= */
 const HUD_BASE={
  tL:{size:70,font:26}, tR:{size:70,font:26}, tD:{size:70,font:12},
  tG:{size:90,font:15}, tB:{size:58,font:11}, tI:{size:58,font:11}, tPause:{size:50,font:20}
 };
 const HUD_LABEL={tL:"Esquerda ◀",tR:"Direita ▶",tG:"Gás",tB:"Freio",tD:"Drift",tI:"Item",tPause:"Pausa ⏸"};
 function defaultHudConfig(){ return {
- tL:{x:0.11,y:0.90,size:1,opacity:1},
- tR:{x:0.30,y:0.90,size:1,opacity:1},
- tD:{x:0.60,y:0.92,size:1,opacity:1},
- tG:{x:0.87,y:0.85,size:1,opacity:1},
- tB:{x:0.90,y:0.70,size:1,opacity:1},
- tI:{x:0.62,y:0.80,size:1,opacity:1},
+ tL:{x:0.11,y:0.90,size:1,opacity:1}, tR:{x:0.30,y:0.90,size:1,opacity:1},
+ tD:{x:0.60,y:0.92,size:1,opacity:1}, tG:{x:0.87,y:0.85,size:1,opacity:1},
+ tB:{x:0.90,y:0.70,size:1,opacity:1}, tI:{x:0.62,y:0.80,size:1,opacity:1},
  tPause:{x:0.93,y:0.08,size:1,opacity:1}
 };}
 let hudConfig=defaultHudConfig();
@@ -339,11 +323,8 @@ function selectHudBtn(id){
  $("hudOpacityRange").value=Math.round(hudConfig[id].opacity*100);
  updateHudSelLabel();
 }
-function selectAllHud(){
- selectedHud=null; clearHudSel();
- $("hudSizeRange").value=100; $("hudOpacityRange").value=100;
- updateHudSelLabel();
-}
+function selectAllHud(){ selectedHud=null; clearHudSel();
+ $("hudSizeRange").value=100; $("hudOpacityRange").value=100; updateHudSelLabel(); }
 function applyToSelOrAll(fn){
  if(selectedHud)fn(hudConfig[selectedHud]);
  else for(const id in hudConfig)fn(hudConfig[id]);
@@ -435,9 +416,12 @@ const ITEM_NAME={turbo:"TURBO",banana:"BANANA",bomba:"BOMBA",projetil:"PROJÉTIL
 const settings={som:true,sombras:true,diff:"normal"};
 let selChar=1, selTrack=0;
 
-/* ================= PISTAS ================= */
+/* ============================================================
+ PISTAS — COPA VERDE (nível 1, 2 e 3)
+============================================================ */
 const TRACKS=[
-{ name:"CIRCUITO VERDE", icon:"🌿",
+{ /* ---- NÍVEL 1: CIRCUITO VERDE ---- */
+ name:"CIRCUITO VERDE", icon:"🌿",
  cp:[[-20,42,0],[70,42,0],[122,18,1],[142,-34,4],[116,-88,9],[55,-114,12],[-15,-112,10],[-72,-88,6],[-112,-46,3],[-128,2,1],[-92,32,0.3]],
  fin:[10,42],
  shortcut:{gA:[-118,2],gB:[-42,41],P:[-82,18]},
@@ -446,7 +430,7 @@ const TRACKS=[
          {at:[120,-95],lat:8,r:7,surf:"sand"},{at:[-80,-90],lat:8,r:7,surf:"mud"} ],
  ramps:[ {x:20,z:-113,r:7,pow:11},{x:-86,z:24,r:5,pow:7} ],
  pads:[ {x:30,z:42,len:16},{x:10,z:-113,len:14},{x:130,z:-58,len:13} ],
- sand:[], bridges:[],
+ patches:[], bridges:[],
  boxes:[ {x:50,z:42},{x:-40,z:-112},{x:135,z:-50} ],
  rocks:[ {at:[20,-113],lat:3.5},{at:[-30,-110],lat:-3.5},{at:[130,-50],lat:4} ],
  cones:[ {at:[125,5],lat:4.5},{at:[135,-18],lat:-4.5},{at:[108,22],lat:4} ],
@@ -457,18 +441,19 @@ const TRACKS=[
          {t:"ATALHO ➤",bg:"#e09a00",fg:"#123",x:-92,z:32} ],
  grandstand:[40,42],
  theme:{ sky:0x8fd3ff,fog:0xa9e2ff,fogNear:150,fogFar:470,
-   ground:0x3fae4a,road:0x43484f,edge:0xd8d8d8,pad:0xff8c2e,sandPatch:0x9b7c4a,wood:0x8a5a2b,
+   ground:0x3fae4a,road:0x43484f,edge:0xd8d8d8,pad:0xff8c2e,sandPatch:0x9b7c4a,mudPatch:0x5d4a2f,wood:0x8a5a2b,
    base:0x2c7a35,water:false,tree:"pine",mountain:[0x6f9e6f,0x88a08a],
-   obstacle:"rock",cone:"cone",umbrellas:false,
+   obstacle:"rock",cone:"cone",deco:"forest",umbrellas:false,
    flowerColors:[0xff5d8f,0xffd23e,0xff4757,0xffffff,0x2e9bff],
    hemiSky:0xd8f0ff,hemiGround:0x3f7a3a,sun:0xfff3d6,offroad:"grass" }
 },
-{ name:"PRAIA TROPICAL", icon:"🏖️",
+{ /* ---- NÍVEL 2: PRAIA TROPICAL ---- */
+ name:"PRAIA TROPICAL", icon:"🏖️",
  cp:[[-80,-95,3],[20,-105,4.5],[105,-120,6],[160,-90,4],[182,-30,2],[172,45,1],[130,72,0.6],[152,112,0.5],[92,142,0],[30,122,0],[-35,150,0],[-95,140,0],[-142,100,0.3],[-166,42,0.5],[-156,-28,1],[-122,-66,2]],
  fin:[0,-105], shortcut:null, zones:[],
  ramps:[ {x:70,z:-116,r:7,pow:11},{x:-140,z:-45,r:5,pow:8} ],
  pads:[ {x:-20,z:-101,len:14},{x:177,z:-50,len:13},{x:-120,z:118,len:12} ],
- sand:[ {x:175,z:-10,len:16},{x:0,z:135,len:16} ],
+ patches:[ {x:175,z:-10,len:16,surf:"sand"},{x:0,z:135,len:16,surf:"sand"} ],
  bridges:[ {x:-166,z:42,len:20} ],
  boxes:[ {x:-50,z:-98,lats:[-4.5,-1.5,1.5,4.5]},
          {x:178,z:-60,lats:[-3,0,3]},
@@ -482,11 +467,39 @@ const TRACKS=[
          {t:"RADICAIS KIDS!",bg:"#ff5d8f",fg:"#fff",x:-140,z:120} ],
  grandstand:[-30,-100],
  theme:{ sky:0x7ec8ff,fog:0xbfe6ff,fogNear:140,fogFar:460,
-   ground:0xe6cf96,road:0xbfa263,edge:0xfff2cc,pad:0xff9d3e,sandPatch:0xeedfa8,wood:0x9a6a3f,
+   ground:0xe6cf96,road:0xbfa263,edge:0xfff2cc,pad:0xff9d3e,sandPatch:0xeedfa8,mudPatch:0x5d4a2f,wood:0x9a6a3f,
    base:0x1a6fc4,water:true,tree:"palm",mountain:null,
-   obstacle:"coral",cone:"buoy",umbrellas:true,
+   obstacle:"coral",cone:"buoy",deco:"beach",umbrellas:true,
    flowerColors:[0xff8ac2,0xffd23e,0xffffff,0xff6f6f,0x7ee0c0],
    hemiSky:0xeaf6ff,hemiGround:0xc2a76a,sun:0xfff0c0,offroad:"sand" }
+},
+{ /* ---- NÍVEL 3: FAZENDA MALUCA ---- */
+ name:"FAZENDA MALUCA", icon:"🚜",
+ cp:[[-20,75,0],[70,75,0],[130,55,0.5],[155,0,1],[130,-55,1.5],[75,-90,2],[30,-80,1.5],[-10,-100,1],[-60,-85,1],[-110,-60,0.5],[-130,-10,0],[-115,40,0],[-75,65,0]],
+ fin:[25,75],
+ shortcut:{gA:[-125,-40],gB:[-115,15],P:[-95,-12]},
+ zones:[ {x:-120,z:-28,r:7,surf:"dirt"},{x:-105,z:-12,r:9,surf:"dirt"},{x:-112,z:4,r:7,surf:"dirt"} ],
+ ramps:[ {x:105,z:-72,r:7,pow:10},{x:-125,z:-35,r:5,pow:7} ],
+ pads:[ {x:20,z:75,len:14},{x:140,z:-30,len:13},{x:-60,z:-87,len:12} ],
+ patches:[ {x:-10,z:-100,len:16,surf:"mud"},{x:30,z:-80,len:14,surf:"mud"} ],
+ bridges:[],
+ boxes:[ {x:60,z:75,lats:[-4.5,-1.5,1.5,4.5]},
+         {x:155,z:0,lats:[-3,0,3]},
+         {x:-90,z:-70,lats:[-5,-2.5,0,2.5,5]} ],
+ rocks:[ {at:[130,-55],lat:3.5},{at:[75,-90],lat:-3.5},{at:[-115,40],lat:3.5},{at:[155,0],lat:-3} ],
+ cones:[ {at:[100,45],lat:4},{at:[-130,-10],lat:-4},{at:[30,-80],lat:4} ],
+ signs:[ {t:"FAZENDA MALUCA",bg:"#b03a2e",fg:"#fff",x:20,z:75},
+         {t:"FENO FRESCO",bg:"#d8b45a",fg:"#5a3a1a",x:140,z:-30},
+         {t:"CUIDADO: VACAS",bg:"#fff",fg:"#b03a2e",x:-90,z:-70},
+         {t:"CELEIRO ➤",bg:"#8a5a2b",fg:"#ffd23e",x:-120,z:-20},
+         {t:"MILHO VERDE",bg:"#7fce4a",fg:"#1a4a1a",x:100,z:45} ],
+ grandstand:[20,75],
+ theme:{ sky:0x9fd8ff,fog:0xd8ecc0,fogNear:150,fogFar:470,
+   ground:0x6fae4a,road:0xa8834f,edge:0xf0e0b0,pad:0xff9d3e,sandPatch:0xc9a86a,mudPatch:0x4a3a25,wood:0x8a5a2b,
+   base:0x4f8a3f,water:false,tree:"oak",mountain:[0x6f9e6f,0x88a08a],
+   obstacle:"tractor",cone:"hay",deco:"farm",umbrellas:false,
+   flowerColors:[0xffd23e,0xff8ac2,0xffffff,0xff6f6f],
+   hemiSky:0xd8f0d0,hemiGround:0x4f7a3a,sun:0xfff0c0,offroad:"grass" }
 }];
 
 /* ================= ÁUDIO ================= */
@@ -606,12 +619,14 @@ function initThree(){
 
 /* ================= CONSTRUÇÃO DE PISTA ================= */
 let N=720, S=[], FIN=0, cpIdx=[], K=12, cpPose=[];
-const TRACK={zones:[],ramps:[],pads:[],sand:[],bridges:[],boxes:[],obstacles:[],wallP:[],wallN:[]};
+const TRACK={zones:[],ramps:[],pads:[],patches:[],bridges:[],boxes:[],obstacles:[],wallP:[],wallN:[]};
 let sun,flagMeshes=[],clouds=[],debugGroup=null,trauma=0;
 let currentTrack=0, defaultOffroad="grass", waterMat=null, boxMeshes=[];
 window.CONES=[];
 const idxNear=(x,z)=>{let bi=0,bd=1e9;for(let i=0;i<N;i++){const dx=S[i].p.x-x,dz=S[i].p.z-z,d=dx*dx+dz*dz;if(d<bd){bd=d;bi=i}}return bi};
 function addTrauma(v){ trauma=Math.min(.55,trauma+v); }
+function terrainYAt(x,z){ const i=idxNear(x,z),s=S[i];
+ const dx=x-s.p.x,dz=z-s.p.z; return (dx*dx+dz*dz<=WT*WT)?s.p.y:-3; }
 function buildSamples(cp){
  S=[];
  const pts=cp.map(p=>new THREE.Vector3(p[0],p[2],p[1]));
@@ -625,7 +640,7 @@ function buildSamples(cp){
   S[i].curv=t1.x*t2.z-t1.z*t2.x; }
 }
 function placeFeatures(def){
- TRACK.zones=[];TRACK.ramps=[];TRACK.pads=[];TRACK.sand=[];TRACK.bridges=[];TRACK.boxes=[];TRACK.obstacles=[];TRACK.wallP=[];TRACK.wallN=[];
+ TRACK.zones=[];TRACK.ramps=[];TRACK.pads=[];TRACK.patches=[];TRACK.bridges=[];TRACK.boxes=[];TRACK.obstacles=[];TRACK.wallP=[];TRACK.wallN=[];
  window.CONES=[];
  for(let i=0;i<N;i++){TRACK.wallP.push(true);TRACK.wallN.push(true);}
  if(def.shortcut){
@@ -643,7 +658,7 @@ function placeFeatures(def){
   TRACK.zones.push({x,z:zc,r:z.r,type:z.surf}); }
  for(const r of def.ramps)TRACK.ramps.push({x:r.x,z:r.z,r:r.r,pow:r.pow});
  for(const p of def.pads){ const i0=idxNear(p.x,p.z); TRACK.pads.push({i0,i1:(i0+p.len)%N}); }
- for(const s of def.sand){ const i0=idxNear(s.x,s.z); TRACK.sand.push({i0,i1:(i0+s.len)%N}); }
+ for(const p of def.patches){ const i0=idxNear(p.x,p.z); TRACK.patches.push({i0,i1:(i0+p.len)%N,surf:p.surf||"sand"}); }
  for(const b of def.bridges){ const i0=idxNear(b.x,b.z); TRACK.bridges.push({i0,i1:(i0+b.len)%N}); }
  for(const b of def.boxes){ const i=idxNear(b.x,b.z),s=S[i];
   const lats=b.lats||[-4.5,-1.5,1.5,4.5];
@@ -661,6 +676,9 @@ function placeFeatures(def){
    const body=new THREE.Mesh(new THREE.SphereGeometry(.45,10,8),MAT(0xff5d5d)); m.add(body);
    const band=new THREE.Mesh(new THREE.TorusGeometry(.45,.08,6,14),MAT(0xffffff)); band.rotation.x=PI/2; m.add(band);
    m.position.set(x,s.p.y+.5,z);
+  } else if(coneStyle==="hay"){
+   m=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,.7,8),MAT(0xd8b45a));
+   m.rotation.z=PI/2; m.position.set(x,s.p.y+.4,z);
   } else {
    m=new THREE.Mesh(new THREE.ConeGeometry(.35,.9,8),MAT(0xff7a1a));
    m.position.set(x,s.p.y+.45,z);
@@ -699,6 +717,19 @@ function buildTrees(theme){
    dummy.updateMatrix(); heads.setMatrixAt(i,dummy.matrix);
    heads.setColorAt(i,new THREE.Color().setHSL(0.28+rnd(0.06),0.6,0.35+rnd(0.1))); }
   trunks.castShadow=heads.castShadow=true; raceScene.add(trunks,heads);
+ } else if(theme.tree==="oak"){
+  const COUNT=100;
+  const trunks=new THREE.InstancedMesh(new THREE.CylinderGeometry(.25,.35,2,6),MAT(0x6a4a2b),COUNT);
+  const canopies=new THREE.InstancedMesh(new THREE.SphereGeometry(1.6,8,6),new THREE.MeshLambertMaterial({color:0xffffff}),COUNT);
+  for(let i=0;i<COUNT;i++){ const si=Math.floor(rnd(N)),s=S[si];
+   const lat=(17+rnd(9))*(Math.random()<.5?1:-1);
+   const p=s.p.clone().addScaledVector(s.n,lat);
+   const scv=rnd(.7,1.4);
+   dummy.position.set(p.x,p.y+1*scv,p.z); dummy.rotation.set(0,0,0); dummy.scale.set(scv,scv,scv);
+   dummy.updateMatrix(); trunks.setMatrixAt(i,dummy.matrix);
+   dummy.position.set(p.x,p.y+2.6*scv,p.z); dummy.updateMatrix(); canopies.setMatrixAt(i,dummy.matrix);
+   canopies.setColorAt(i,new THREE.Color().setHSL(.28+rnd(.08),.55,.32+rnd(.12))); }
+  trunks.castShadow=canopies.castShadow=true; raceScene.add(trunks,canopies);
  } else {
   const COUNT=120;
   const trunks=new THREE.InstancedMesh(new THREE.CylinderGeometry(.22,.34,1.7,6),MAT(0x7a5230),COUNT);
@@ -749,15 +780,101 @@ function buildSigns(signs){
   const pole=new THREE.Mesh(new THREE.CylinderGeometry(.1,.1,3,6),MAT(0x888888));
   pole.position.set(p.x,s.p.y+1.5,p.z); raceScene.add(m,pole); }
 }
+/* ---- decorações da FAZENDA ---- */
+function buildFenceRect(cx,cz,w,h){
+ const posts=[]; const step=4;
+ for(let x=cx-w/2;x<=cx+w/2;x+=step){ posts.push([x,cz-h/2]); posts.push([x,cz+h/2]); }
+ for(let z=cz-h/2;z<=cz+h/2;z+=step){ posts.push([cx-w/2,z]); posts.push([cx+w/2,z]); }
+ const inst=new THREE.InstancedMesh(new THREE.BoxGeometry(.22,1.2,.22),MAT(0x8a5a2b),posts.length);
+ const dummy=new THREE.Object3D();
+ for(let i=0;i<posts.length;i++){ const [x,z]=posts[i]; const y=terrainYAt(x,z);
+  dummy.position.set(x,y+0.6,z); dummy.rotation.set(0,0,0); dummy.scale.set(1,1,1);
+  dummy.updateMatrix(); inst.setMatrixAt(i,dummy.matrix); }
+ inst.castShadow=true; raceScene.add(inst);
+}
+function buildCow(x,z,rotY){
+ const g=new THREE.Group(); const y=terrainYAt(x,z);
+ box(1.4,0.8,0.8,0xf5f0e8,0,0.7,0,g);
+ box(0.5,0.5,0.5,0xf5f0e8,0.85,0.9,0,g);
+ box(0.35,0.3,0.3,0x2c2c2c,-0.3,0.85,0.2,g);
+ box(0.3,0.3,0.3,0x2c2c2c,0.2,0.75,-0.2,g);
+ const legs=[[-0.5,0.3],[0.5,0.3],[-0.5,-0.3],[0.5,-0.3]];
+ for(const [lx,lz] of legs)box(0.15,0.5,0.15,0xe0d8c8,lx,0.25,lz,g);
+ g.position.set(x,y,z); g.rotation.y=rotY;
+ g.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+ raceScene.add(g);
+}
+function buildHay(x,z){
+ const y=terrainYAt(x,z);
+ const m=new THREE.Mesh(new THREE.CylinderGeometry(.6,.6,.9,10),MAT(0xd8b45a));
+ m.rotation.z=PI/2; m.rotation.y=rnd(TAU); m.position.set(x,y+.6,z);
+ m.castShadow=true; raceScene.add(m);
+}
+function buildBarn(x,z,rotY){
+ const g=new THREE.Group(); const y=terrainYAt(x,z);
+ box(0.4,3,9,0xb03a2e,-3.2,1.5,0,g);
+ box(0.4,3,9,0xb03a2e,3.2,1.5,0,g);
+ const r1=box(4.2,0.3,9.6,0x7a2a1e,0,0,0,g); r1.position.set(-1.6,3.7,0); r1.rotation.z=0.55;
+ const r2=box(4.2,0.3,9.6,0x7a2a1e,0,0,0,g); r2.position.set(1.6,3.7,0); r2.rotation.z=-0.55;
+ box(6.4,0.6,0.4,0x8a4a2e,0,3,4.3,g);
+ box(6.4,0.6,0.4,0x8a4a2e,0,3,-4.3,g);
+ g.position.set(x,y,z); g.rotation.y=rotY;
+ g.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+ raceScene.add(g);
+}
+function buildSilo(x,z){
+ const y=terrainYAt(x,z);
+ const g=new THREE.Group();
+ const body=new THREE.Mesh(new THREE.CylinderGeometry(2,2,7,12),MAT(0xc8ccd0)); body.position.y=3.5; g.add(body);
+ const top=new THREE.Mesh(new THREE.ConeGeometry(2.1,1.6,12),MAT(0xb03a2e)); top.position.y=7.6; g.add(top);
+ g.position.set(x,y,z);
+ g.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+ raceScene.add(g);
+}
+function buildTractor(x,y,z){
+ const g=new THREE.Group();
+ box(1.2,0.8,2,0xc0392b,0,0.7,0,g);
+ box(1,0.8,0.9,0x2c3e50,0,1.4,-0.4,g);
+ const wg=new THREE.CylinderGeometry(0.6,0.6,0.35,10); wg.rotateZ(PI/2);
+ const w1=new THREE.Mesh(wg,MAT(0x1c1c22)); w1.position.set(-0.7,0.6,-0.6); g.add(w1);
+ const w2=w1.clone(); w2.position.set(0.7,0.6,-0.6); g.add(w2);
+ const fg=new THREE.CylinderGeometry(0.35,0.35,0.3,10); fg.rotateZ(PI/2);
+ const f1=new THREE.Mesh(fg,MAT(0x1c1c22)); f1.position.set(-0.55,0.35,0.8); g.add(f1);
+ const f2=f1.clone(); f2.position.set(0.55,0.35,0.8); g.add(f2);
+ g.position.set(x,y,z); g.rotation.y=rnd(TAU);
+ g.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+ raceScene.add(g);
+}
+function buildFarmDeco(){
+ const dummy=new THREE.Object3D();
+ const patches=[ {x:5,z:-15,w:70,h:45}, {x:70,z:15,w:40,h:22}, {x:-60,z:15,w:40,h:22} ];
+ const cropPos=[];
+ for(const pt of patches){ for(let cx=pt.x-pt.w/2;cx<=pt.x+pt.w/2;cx+=3.2){
+  for(let cz=pt.z-pt.h/2;cz<=pt.z+pt.h/2;cz+=3.2){ cropPos.push([cx+rnd(-.7,.7),cz+rnd(-.7,.7)]); } } }
+ const crops=new THREE.InstancedMesh(new THREE.ConeGeometry(.35,1.1,5),new THREE.MeshLambertMaterial({color:0xffffff}),cropPos.length);
+ for(let i=0;i<cropPos.length;i++){ const [cx,cz]=cropPos[i]; const gy=terrainYAt(cx,cz);
+  dummy.position.set(cx,gy+0.55,cz); dummy.rotation.set(0,rnd(TAU),0); const s=rnd(.7,1.2); dummy.scale.set(s,s,s);
+  dummy.updateMatrix(); crops.setMatrixAt(i,dummy.matrix);
+  crops.setColorAt(i,new THREE.Color([0x7fce4a,0x9fd84a,0xd8c94a,0x6fae3f][i%4])); }
+ crops.castShadow=true; raceScene.add(crops);
+ buildFenceRect(5,-15,70,45);
+ buildCow(20,-20,0.4); buildCow(-15,-5,-0.7); buildCow(45,-25,2.1); buildCow(-40,10,1.3);
+ buildHay(-100,-25); buildHay(-88,-5); buildHay(60,5); buildHay(-30,-60); buildHay(90,-60);
+ buildBarn(-95,-12,Math.atan2(10,55));
+ buildSilo(40,40);
+}
 function buildTrackVisual(def){
  const theme=def.theme;
  const padSet=new Set(); for(const p of TRACK.pads)for(let j=0;j<=((p.i1-p.i0+N)%N);j++)padSet.add((p.i0+j)%N);
  const bridgeSet=new Set(); for(const b of TRACK.bridges)for(let j=0;j<=((b.i1-b.i0+N)%N);j++)bridgeSet.add((b.i0+j)%N);
- const sandSet=new Set(); for(const s of TRACK.sand)for(let j=0;j<=((s.i1-s.i0+N)%N);j++)sandSet.add((s.i0+j)%N);
+ const patchSurf=new Map();
+ for(const p of TRACK.patches){ const len=((p.i1-p.i0+N)%N);
+  for(let j=0;j<=len;j++)patchSurf.set((p.i0+j)%N,p.surf); }
  const pos=[],col=[],idxArr=[];
  const cGround=new THREE.Color(theme.ground), cRoad=new THREE.Color(theme.road),
        cEdge=new THREE.Color(theme.edge), cPad=new THREE.Color(theme.pad),
-       cSand=new THREE.Color(theme.sandPatch), cWood=new THREE.Color(theme.wood);
+       cSand=new THREE.Color(theme.sandPatch), cMud=new THREE.Color(theme.mudPatch),
+       cWood=new THREE.Color(theme.wood);
  function terrainColor(x,z){ for(const zn of TRACK.zones){ const dx=x-zn.x,dz=z-zn.z;
    if(dx*dx+dz*dz<zn.r*zn.r){ const m={dirt:0x8a6a3f,sand:0xe0c97f,mud:0x5d4a2f}; return new THREE.Color(m[zn.type]||0x8a6a3f); } }
   const c=cGround.clone(); const nz=Math.sin(x*.3)*Math.cos(z*.27)*.5+.5;
@@ -770,7 +887,8 @@ function buildTrackVisual(def){
   let cL,cR;
   if(padSet.has(i)){ cL=cPad.clone(); cR=cPad.clone(); }
   else if(bridgeSet.has(i)){ cL=cWood.clone(); cR=cWood.clone(); }
-  else if(sandSet.has(i)){ cL=cSand.clone(); cR=cSand.clone(); }
+  else if(patchSurf.has(i)){ const ps=patchSurf.get(i);
+   const pc=(ps==="mud")?cMud:cSand; cL=pc.clone(); cR=pc.clone(); }
   else { cL=cRoad.clone().lerp(cEdge,.35); cR=cRoad.clone().lerp(cEdge,.35);
    const v1=Math.sin(i*.7)*.03; cL.offsetHSL(0,0,v1); cR.offsetHSL(0,0,-v1); }
   const cFL=terrainColor(FL.x,FL.z), cFR=terrainColor(FR.x,FR.z);
@@ -844,6 +962,8 @@ function buildTrackVisual(def){
    const c2=new THREE.Mesh(new THREE.DodecahedronGeometry(.6),MAT(0xff8f7a)); c2.position.set(.4,1.2,.2); grp.add(c2);
    grp.position.set(o.x,o.y,o.z); grp.rotation.y=rnd(TAU); grp.castShadow=true;
    raceScene.add(grp);
+  } else if(obStyle==="tractor"){
+   buildTractor(o.x,o.y,o.z);
   } else {
    const m=new THREE.Mesh(new THREE.DodecahedronGeometry(1.2),MAT(0x7d8087));
    m.position.set(o.x,o.y+.55,o.z); m.rotation.set(rnd(TAU),rnd(TAU),0);
@@ -852,6 +972,7 @@ function buildTrackVisual(def){
  if(theme.umbrellas)buildUmbrellas();
  buildFlowers(theme.flowerColors);
  buildSigns(def.signs);
+ if(theme.deco==="farm")buildFarmDeco();
  if(def.grandstand){ const stp=S[idxNear(def.grandstand[0],def.grandstand[1])];
   const stand=new THREE.Mesh(new THREE.BoxGeometry(22,6,5),MAT(0x556677));
   const sp=stp.p.clone().addScaledVector(stp.n,RAIL_LAT+7);
@@ -1147,7 +1268,7 @@ function groundInfo(k){
   for(const z of TRACK.zones){ const ax=k.pos.x-z.x, az=k.pos.z-z.z;
    if(ax*ax+az*az<z.r*z.r){surf=z.type;break} } }
  else { surf="road";
-  for(const sp of TRACK.sand) if(inRange(k.idx,sp.i0,sp.i1)&&Math.abs(lat)<RW-0.5){ surf="sand"; break; } }
+  for(const p of TRACK.patches) if(inRange(k.idx,p.i0,p.i1)&&Math.abs(lat)<RW-0.5){ surf=p.surf; break; } }
  return {gy:s.p.y, lat, surf}; }
 function inRange(i,i0,i1){ return ((i-i0+N)%N)<=((i1-i0+N)%N); }
 function grantBoost(k,dur,pow){ const d=dur*k.st.nitroMul;
@@ -1692,8 +1813,19 @@ function buildGrid(){
   b.innerHTML="<div class=\"dot\" style=\"background:#"+ch.col.toString(16).padStart(6,"0")+"\"></div>"+ch.n+"<br><span style=\"opacity:.6\">T"+ch.type+"</span>";
   b.onclick=()=>{AU.init();AU.beep(700,.05,"square",.15);selectChar(ch.id);};
   gEl.appendChild(b); }); }
+function buildTrackButtons(){
+ const cont=$("trackRow"); cont.innerHTML="";
+ TRACKS.forEach((t,i)=>{ const b=document.createElement("button");
+  b.className="btn small blue track"+(i===selTrack?" sel":"");
+  b.dataset.track=i;
+  b.textContent=(i+1)+" "+t.icon+" "+t.name;
+  b.onclick=()=>{ selTrack=i;
+   document.querySelectorAll("[data-track]").forEach(x=>x.classList.toggle("sel",+x.dataset.track===i));
+   AU.beep(760,.06,"square",.15); };
+  cont.appendChild(b); });
+}
 function bindUI(){
- buildGrid();
+ buildGrid(); buildTrackButtons();
  const soon=(t,x)=>{ $("soonTitle").textContent=t; $("soonTxt").textContent=x; show("soon",true); };
  $("btnJogar").onclick=()=>{AU.init();AU.resume();toSelect();};
  $("btnCamp").onclick=()=>soon("CAMPEONATO — EM BREVE","Copa Bronze · Copa Prata · Copa Ouro · Copa Especial. Múltiplas pistas te esperam!");
@@ -1711,7 +1843,6 @@ function bindUI(){
   $("btnHudEdit").classList.remove("hidden");
   $("btnHudEdit").onclick=()=>{ show("settings",false); enterHudEdit(); };
  } else { $("btnHudEdit").classList.add("hidden"); }
- // editor de HUD
  $("hudSave").onclick=()=>{ saveHudConfig(); exitHudEdit(); };
  $("hudReset").onclick=()=>{ hudConfig=defaultHudConfig(); applyHudLayout(); };
  $("hudCancel").onclick=()=>{ if(hudBackup)hudConfig=hudBackup; applyHudLayout(); exitHudEdit(); };
@@ -1726,10 +1857,6 @@ function bindUI(){
   settings.diff=b.dataset.diff;
   document.querySelectorAll("[data-diff]").forEach(x=>x.classList.toggle("sel",x===b));
   AU.beep(600,.06,"square",.15); });
- document.querySelectorAll("[data-track]").forEach(b=>b.onclick=()=>{
-  selTrack=+b.dataset.track;
-  document.querySelectorAll("[data-track]").forEach(x=>x.classList.toggle("sel",x===b));
-  AU.beep(760,.06,"square",.15); });
  $("btnResume").onclick=togglePause;
  $("btnRestart").onclick=()=>{show("pause",false);startRace();};
  $("btnQuit").onclick=()=>{show("pause",false);toMenu();};

@@ -67,7 +67,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #driftBox{bottom:110px;right:14px;display:flex;gap:5px;padding:7px 10px}
 .dseg{width:34px;height:12px;border:2px solid #28527a;border-radius:5px;background:#0b1c30}
 #msg{position:fixed;top:20%;left:0;right:0;text-align:center;z-index:12;pointer-events:none;
-  color:#fff;font-size:min(7vw,46px);letter-spacing:4px;text-shadow:0 3px 0 #000,0 8px 22px #000;opacity:0;transition:opacity .25s;transform:skewX(-6deg)}
+  color:#fff;font-size:min(6vw,40px);letter-spacing:3px;text-shadow:0 3px 0 #000,0 8px 22px #000;opacity:0;transition:opacity .25s;transform:skewX(-6deg);padding:0 10px}
 #wrongWay{position:fixed;top:34%;left:0;right:0;text-align:center;z-index:12;color:#ff4757;font-size:30px;letter-spacing:3px;text-shadow:0 2px 0 #000;display:none;animation:blink .5s infinite}
 @keyframes blink{50%{opacity:.15}}
 #count{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:14;pointer-events:none;
@@ -284,31 +284,42 @@ function mergeGeoms(list){let total=0;
  out.computeVertexNormals();return out}
 
 /* ============================================================
-   TELA CHEIA — Fullscreen API REAL
-   - requestFullscreen() no elemento principal do jogo
-   - navegador oculta abas/barra de endereço/ferramentas
-   - renderer + câmera 3D se adaptam ao novo tamanho
+   TELA CHEIA — Fullscreen API REAL + fallbacks + feedback
 ============================================================ */
 function isFullscreen(){
  const d=document;
  return !!(d.fullscreenElement||d.webkitFullscreenElement||d.mozFullScreenElement||d.msFullscreenElement);
 }
+function inIframe(){ try{ return window.self!==window.top; }catch(e){ return true; } }
+function fsDenied(){
+ if(inIframe()) showMsg("⛔ Tela cheia bloqueada: abra o jogo em uma aba separada",3200);
+ else showMsg("⛔ Tela cheia bloqueada pelo navegador",2400);
+}
 function toggleFullscreen(){
- if(!isFullscreen()){
-  const el=document.documentElement; // elemento principal do jogo
-  let p=null;
-  if(el.requestFullscreen)p=el.requestFullscreen();
-  else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();
-  else if(el.mozRequestFullScreen)el.mozRequestFullScreen();
-  else if(el.msRequestFullscreen)el.msRequestFullscreen();
-  if(p&&p.catch)p.catch(err=>console.warn("Fullscreen negado:",err));
- } else {
+ if(isFullscreen()){
   const d=document;
   if(d.exitFullscreen)d.exitFullscreen();
   else if(d.webkitExitFullscreen)d.webkitExitFullscreen();
   else if(d.mozCancelFullScreen)d.mozCancelFullScreen();
   else if(d.msExitFullscreen)d.msExitFullscreen();
+  syncFsButtons();
+  return;
  }
+ // tenta fullscreen real em vários elementos
+ const els=[document.documentElement,document.body,document.getElementById('cv')];
+ const tryEl=(i)=>{
+  if(i>=els.length){ fsDenied(); return; }
+  const el=els[i]; if(!el){tryEl(i+1);return;}
+  let p=null;
+  if(el.requestFullscreen)p=el.requestFullscreen();
+  else if(el.webkitRequestFullscreen){el.webkitRequestFullscreen();p=null;}
+  else if(el.mozRequestFullScreen){el.mozRequestFullScreen();p=null;}
+  else if(el.msRequestFullscreen){el.msRequestFullscreen();p=null;}
+  else {tryEl(i+1);return;}
+  if(p&&p.then){ p.then(()=>{syncFsButtons();onResize();}).catch(()=>tryEl(i+1)); }
+  else { setTimeout(()=>{ if(isFullscreen()){syncFsButtons();onResize();} else tryEl(i+1); },300); }
+ };
+ tryEl(0);
 }
 function syncFsButtons(){
  const fs=isFullscreen();
@@ -317,11 +328,7 @@ function syncFsButtons(){
  const br=document.getElementById("fsRace");
  if(br)br.textContent=fs?"🗗":"⛶";
 }
-function onFsChange(){
- syncFsButtons();
- onResize();              // adapta imediatamente ao novo tamanho
- setTimeout(onResize,120);// reforça após o navegador estabilizar o viewport
-}
+function onFsChange(){ syncFsButtons(); onResize(); setTimeout(onResize,120); }
 document.addEventListener("fullscreenchange",onFsChange);
 document.addEventListener("webkitfullscreenchange",onFsChange);
 

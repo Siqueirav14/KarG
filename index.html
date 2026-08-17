@@ -94,10 +94,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 #tD{right:118px;bottom:22px;width:70px;height:70px;font-size:12px;background:rgba(55,120,220,.55)}
 #tI{right:124px;bottom:104px;width:58px;height:58px;font-size:11px;background:rgba(210,165,35,.6)}
 #tPause{right:8px;top:8px;width:50px;height:50px;font-size:20px;border-radius:12px;pointer-events:auto;background:rgba(10,25,45,.6)}
-/* ===== BOTÃO TELA CHEIA NA CORRIDA ===== */
 #fsRace{position:fixed;top:14px;right:140px;width:44px;height:44px;font-size:20px;z-index:11;
   background:var(--painel);border:3px solid #28527a;border-radius:10px;color:#fff;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;}
+  display:flex;align-items:center;justify-content:center}
 #hudEditPanel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;
   background:rgba(6,16,30,.95);border:3px solid #28527a;border-radius:16px;padding:16px;
   width:min(360px,92vw);max-height:82vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
@@ -252,9 +251,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
   <div class="tb" id="tB">FREIO</div>
   <div class="tb" id="tG">GÁS</div>
 </div>
-<!-- Botão de tela cheia durante a corrida -->
 <button id="fsRace" class="hidden" title="Tela cheia">⛶</button>
-
 <div id="fps"></div><div id="err"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -286,31 +283,47 @@ function mergeGeoms(list){let total=0;
  const out=new THREE.BufferGeometry();out.setAttribute("position",new THREE.BufferAttribute(pos,3));
  out.computeVertexNormals();return out}
 
-/* ================= TELA CHEIA (Fullscreen API) ================= */
+/* ============================================================
+   TELA CHEIA — Fullscreen API REAL
+   - requestFullscreen() no elemento principal do jogo
+   - navegador oculta abas/barra de endereço/ferramentas
+   - renderer + câmera 3D se adaptam ao novo tamanho
+============================================================ */
 function isFullscreen(){
- return !!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement);
+ const d=document;
+ return !!(d.fullscreenElement||d.webkitFullscreenElement||d.mozFullScreenElement||d.msFullscreenElement);
 }
 function toggleFullscreen(){
- const doc=document, el=doc.documentElement;
  if(!isFullscreen()){
-  if(el.requestFullscreen) el.requestFullscreen().catch(()=>{});
-  else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  else if(el.mozRequestFullScreen) el.mozRequestFullScreen();
+  const el=document.documentElement; // elemento principal do jogo
+  let p=null;
+  if(el.requestFullscreen)p=el.requestFullscreen();
+  else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();
+  else if(el.mozRequestFullScreen)el.mozRequestFullScreen();
+  else if(el.msRequestFullscreen)el.msRequestFullscreen();
+  if(p&&p.catch)p.catch(err=>console.warn("Fullscreen negado:",err));
  } else {
-  if(doc.exitFullscreen) doc.exitFullscreen();
-  else if(doc.webkitExitFullscreen) doc.webkitExitFullscreen();
-  else if(doc.mozCancelFullScreen) doc.mozCancelFullScreen();
+  const d=document;
+  if(d.exitFullscreen)d.exitFullscreen();
+  else if(d.webkitExitFullscreen)d.webkitExitFullscreen();
+  else if(d.mozCancelFullScreen)d.mozCancelFullScreen();
+  else if(d.msExitFullscreen)d.msExitFullscreen();
  }
 }
 function syncFsButtons(){
  const fs=isFullscreen();
  const bm=document.getElementById("btnFullscreen");
- if(bm) bm.textContent=fs?"🗗 SAIR DA TELA CHEIA":"⛶ TELA CHEIA";
+ if(bm)bm.textContent=fs?"🗗 SAIR DA TELA CHEIA":"⛶ TELA CHEIA";
  const br=document.getElementById("fsRace");
- if(br) br.textContent=fs?"🗗":"⛶";
+ if(br)br.textContent=fs?"🗗":"⛶";
 }
-document.addEventListener("fullscreenchange",syncFsButtons);
-document.addEventListener("webkitfullscreenchange",syncFsButtons);
+function onFsChange(){
+ syncFsButtons();
+ onResize();              // adapta imediatamente ao novo tamanho
+ setTimeout(onResize,120);// reforça após o navegador estabilizar o viewport
+}
+document.addEventListener("fullscreenchange",onFsChange);
+document.addEventListener("webkitfullscreenchange",onFsChange);
 
 /* ================= EDITOR DE HUD ================= */
 const HUD_BASE={
@@ -452,7 +465,7 @@ const settings={som:true,sombras:true,diff:"normal"};
 let selChar=1, selTrack=0;
 
 /* ============================================================
- PISTAS — COPA VERDE (dificuldade crescente: 1 < 2 < 3)
+ PISTAS — COPA VERDE
 ============================================================ */
 const TRACKS=[
 { name:"CIRCUITO VERDE", icon:"🌿",
@@ -645,13 +658,21 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden&&(state===
 let renderer,W=innerWidth,H=innerHeight;
 const cam=new THREE.PerspectiveCamera(62,W/H,.1,900);
 let raceScene=null,selScene=null,selTurn=null;
+/* Redimensionamento real: atualiza renderer + câmera 3D com o novo tamanho */
+function onResize(){
+ W=innerWidth; H=innerHeight;
+ cam.aspect=W/H;
+ cam.updateProjectionMatrix();
+ if(renderer)renderer.setSize(W,H);
+ if(state==="select")frameSelectCamera();
+ applyHudLayout();
+}
 function initThree(){
  renderer=new THREE.WebGLRenderer({canvas:document.getElementById("cv"),antialias:true});
  renderer.setSize(W,H); renderer.setPixelRatio(Math.min(devicePixelRatio,isTouch?1.5:2));
  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  cam.position.set(0,80,160);
- addEventListener("resize",()=>{ W=innerWidth;H=innerHeight; cam.aspect=W/H; cam.updateProjectionMatrix(); renderer.setSize(W,H);
-  if(state==="select")frameSelectCamera(); applyHudLayout(); });
+ addEventListener("resize",onResize);
 }
 
 /* ================= CONSTRUÇÃO DE PISTA ================= */
@@ -1889,6 +1910,7 @@ function startRace(){
  if(isTouch){ show("touch",true); applyHudLayout(); }
  const el=$("count"); el.textContent=""; el.style.color=""; el.dataset.go="";
  showMsg(TRACKS[selTrack].icon+" "+TRACKS[selTrack].name,1600);
+ onResize();
  updateCamera(1,performance.now()); }
 function togglePause(){
  if(state==="race"||state==="count"){ pausedFrom=state; state="paused"; show("pause",true); AU.engineOff(); AU.skid(false); }

@@ -4,9 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>KART RACING — Copa Verde</title>
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="theme-color" content="#0d1b2a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kart Racing">
 <style>
 :root{ --verde:#3ddc55; --amarelo:#ffd23e; --vermelho:#ff4757; --azul:#2e9bff; --painel:rgba(10,22,40,.82); }
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-touch-callout:none}
+/* CORREÇÃO: sem seleção de texto / sem arrastar / sem callout, mas preserva campos de texto */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+  user-select:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;
+  -webkit-touch-callout:none;-webkit-user-drag:none}
+input,textarea{user-select:text;-webkit-user-select:text;-moz-user-select:text;-ms-user-select:text;-webkit-touch-callout:default}
 html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Arial Black","Segoe UI",Impact,system-ui,sans-serif;
   overscroll-behavior:none;position:fixed;inset:0}
 #cv{position:fixed;inset:0;display:block;touch-action:none}
@@ -165,7 +178,8 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
     <button class="btn" id="btnBat">BATALHA</button>
     <button class="btn" id="btnGar">GARAGEM</button>
     <button class="btn blue" id="btnConf">CONFIGURAÇÕES</button>
-    <button class="btn small blue" id="btnFullscreen" style="margin-top:12px">⛶ TELA CHEIA</button>
+    <!-- PWA -->
+    <button class="btn small blue hidden" id="btnInstall">📲 INSTALAR APP</button>
   </div>
   <div class="hint" id="menuHint">F3 = modo debug · ESPAÇO = drift · E = item</div>
   <div class="checker" style="position:absolute;bottom:0"></div>
@@ -258,8 +272,17 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:"Ar
 <script>
 "use strict";
 addEventListener("error",e=>{const d=document.getElementById("err");if(d){d.style.display="block";d.textContent="ERRO: "+e.message+" (linha "+e.lineno+")";}});
-document.addEventListener("gesturestart",e=>e.preventDefault());
-document.addEventListener("dblclick",e=>e.preventDefault());
+// CORREÇÃO: bloqueia zoom por gesto e duplo-clique APENAS fora de campos de texto
+document.addEventListener("gesturestart",e=>{
+  const t=e.target;
+  if(t&&(t.isContentEditable||t.tagName==="INPUT"||t.tagName==="TEXTAREA"))return;
+  e.preventDefault();
+});
+document.addEventListener("dblclick",e=>{
+  const t=e.target;
+  if(t&&(t.isContentEditable||t.tagName==="INPUT"||t.tagName==="TEXTAREA"))return;
+  e.preventDefault();
+});
 
 const STEP=1/60, RAIL_LAT=14, OPEN_LAT=24, WT=28, RW=7.5, MAX_BOOST_SPEED=50, KART_R=1.3;
 let DEBUG=false;
@@ -283,9 +306,7 @@ function mergeGeoms(list){let total=0;
  const out=new THREE.BufferGeometry();out.setAttribute("position",new THREE.BufferAttribute(pos,3));
  out.computeVertexNormals();return out}
 
-/* ============================================================
-   TELA CHEIA — Fullscreen API REAL + fallbacks + feedback
-============================================================ */
+/* ===== TELA CHEIA ===== */
 function isFullscreen(){
  const d=document;
  return !!(d.fullscreenElement||d.webkitFullscreenElement||d.mozFullScreenElement||d.msFullscreenElement);
@@ -305,7 +326,6 @@ function toggleFullscreen(){
   syncFsButtons();
   return;
  }
- // tenta fullscreen real em vários elementos
  const els=[document.documentElement,document.body,document.getElementById('cv')];
  const tryEl=(i)=>{
   if(i>=els.length){ fsDenied(); return; }
@@ -332,7 +352,21 @@ function onFsChange(){ syncFsButtons(); onResize(); setTimeout(onResize,120); }
 document.addEventListener("fullscreenchange",onFsChange);
 document.addEventListener("webkitfullscreenchange",onFsChange);
 
-/* ================= EDITOR DE HUD ================= */
+/* ===== PWA: instalação + service worker ===== */
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault(); deferredPrompt=e;
+  const b=document.getElementById('btnInstall'); if(b)b.classList.remove('hidden');
+});
+window.addEventListener('appinstalled',()=>{ const b=document.getElementById('btnInstall'); if(b)b.classList.add('hidden'); });
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('sw.js').then(r=>console.log("SW registrado",r.scope))
+      .catch(err=>console.warn("SW falhou:",err));
+  });
+}
+
+/* ===== EDITOR DE HUD ===== */
 const HUD_BASE={
  tL:{size:70,font:26}, tR:{size:70,font:26}, tD:{size:70,font:12},
  tG:{size:90,font:15}, tB:{size:58,font:11}, tI:{size:58,font:11}, tPause:{size:50,font:20}
@@ -429,7 +463,7 @@ function exitHudEdit(){
  show("settings",true);
 }
 
-/* ================= DADOS ================= */
+/* ===== DADOS ===== */
 const TYPES={
 1:{n:"VELOCISTA",v:10,a:7,c:5,f:4,d:6,g:5},
 2:{n:"FOGUETE",v:8,a:10,c:7,f:3,d:7,g:6},
@@ -471,9 +505,7 @@ const ITEM_NAME={turbo:"TURBO",banana:"BANANA",bomba:"BOMBA",projetil:"PROJÉTIL
 const settings={som:true,sombras:true,diff:"normal"};
 let selChar=1, selTrack=0;
 
-/* ============================================================
- PISTAS — COPA VERDE
-============================================================ */
+/* ===== PISTAS ===== */
 const TRACKS=[
 { name:"CIRCUITO VERDE", icon:"🌿",
  cp:[[-20,42,0],[70,42,0],[122,18,1],[142,-34,4],[116,-88,9],[55,-114,12],[-15,-112,10],[-72,-88,6],[-112,-46,3],[-128,2,1],[-92,32,0.3]],
@@ -559,7 +591,7 @@ const TRACKS=[
    hemiSky:0xd8f0d0,hemiGround:0x4f7a3a,sun:0xfff0c0,offroad:"grass" }
 }];
 
-/* ================= ÁUDIO ================= */
+/* ===== ÁUDIO ===== */
 const AU={ctx:null,master:null,eng:null,engG:null,eng2:null,skidG:null,started:false,lastHitS:0,
  init(){ if(this.ctx)return; const C=window.AudioContext||window.webkitAudioContext; if(!C)return;
   const t=this.ctx=new C(); this.master=t.createGain(); this.master.gain.value=.42; this.master.connect(t.destination);
@@ -602,7 +634,7 @@ const AU={ctx:null,master:null,eng:null,engG:null,eng2:null,skidG:null,started:f
  fanfare(win){ const seq=win?[523,659,784,1046,1318]:[392,330,262,196];
   seq.forEach((f,i)=>setTimeout(()=>this.beep(f,.22,"square",.28),i*160)); }};
 
-/* ================= ENTRADA ================= */
+/* ===== ENTRADA ===== */
 const input={gas:false,brake:false,left:false,right:false,drift:false,itemQ:false};
 const KEYMAP={KeyW:"gas",ArrowUp:"gas",KeyS:"brake",ArrowDown:"brake",KeyA:"left",ArrowLeft:"left",KeyD:"right",ArrowRight:"right",Space:"drift",ShiftLeft:"drift",ShiftRight:"drift"};
 addEventListener("keydown",e=>{ AU.init();AU.resume();
@@ -652,7 +684,6 @@ function bindTouchControls(){
   layer.addEventListener("touchend",tUp,{passive:false});
   layer.addEventListener("touchcancel",tUp,{passive:false});
  }
- layer.addEventListener("contextmenu",e=>e.preventDefault());
  const pb=document.getElementById("tPause");
  if(pb){ const h=e=>{ if(hudEditActive)return; e.preventDefault(); e.stopPropagation(); AU.init(); AU.resume(); togglePause(); };
   pb.addEventListener("pointerdown",h);
@@ -661,11 +692,10 @@ function bindTouchControls(){
 if(isTouch){ bindTouchControls(); setupHudEdit(); }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden&&(state==="race"||state==="count"))togglePause(); });
 
-/* ================= THREE ================= */
+/* ===== THREE ===== */
 let renderer,W=innerWidth,H=innerHeight;
 const cam=new THREE.PerspectiveCamera(62,W/H,.1,900);
 let raceScene=null,selScene=null,selTurn=null;
-/* Redimensionamento real: atualiza renderer + câmera 3D com o novo tamanho */
 function onResize(){
  W=innerWidth; H=innerHeight;
  cam.aspect=W/H;
@@ -682,7 +712,7 @@ function initThree(){
  addEventListener("resize",onResize);
 }
 
-/* ================= CONSTRUÇÃO DE PISTA ================= */
+/* ===== PISTA ===== */
 let N=720, S=[], FIN=0, cpIdx=[], K=12, cpPose=[];
 const TRACK={zones:[],ramps:[],pads:[],patches:[],bridges:[],boxes:[],obstacles:[],wallP:[],wallN:[]};
 let sun,flagMeshes=[],clouds=[],debugGroup=null,trauma=0;
@@ -1222,7 +1252,7 @@ function buildDebug(){
   line(pts,0xff3333); }
 }
 
-/* ================= PARTÍCULAS ================= */
+/* ===== PARTÍCULAS ===== */
 const PMAX=600, pPos=new Float32Array(PMAX*3), pCol=new Float32Array(PMAX*3),
  pBase=new Float32Array(PMAX*3), pVel=new Float32Array(PMAX*3), pLife=new Float32Array(PMAX), pMax=new Float32Array(PMAX);
 let pIdx=0,pointsObj;
@@ -1252,7 +1282,7 @@ function updateParticles(dt){
  pointsObj.geometry.attributes.color.needsUpdate=true;
 }
 
-/* ================= FÁBRICA DE KARTS ================= */
+/* ===== FÁBRICA DE KARTS ===== */
 const wheelGeo=new THREE.CylinderGeometry(.42,.42,.34,10); wheelGeo.rotateZ(PI/2);
 const wheelMat=MAT(0x1c1c22);
 function heartGeo(s,depth){ const sh=new THREE.Shape();
@@ -1385,7 +1415,7 @@ function buildKartVisual(ch){
  return {g,wheels,fronts,shield};
 }
 
-/* ================= SIMULAÇÃO ================= */
+/* ===== SIMULAÇÃO ===== */
 let karts=[],player=null,state="menu",pausedFrom=null,raceTime=0,cdT=0,msgT=0,resultsT=-1,acc=0;
 const L1=1.0,L2=2.1,L3=3.4;
 function statsFor(type){ const t=TYPES[type];
@@ -1808,7 +1838,7 @@ function simStep(dt){
  }
 }
 
-/* ================= CÂMERA ================= */
+/* ===== CÂMERA ===== */
 const camPos=new THREE.Vector3(),lookPos=new THREE.Vector3(); let camInit=false;
 function updateCamera(dt,now){
  const k=player; if(!k)return;
@@ -1830,7 +1860,7 @@ function updateCamera(dt,now){
  sun.position.set(k.pos.x+50,90,k.pos.z+30); sun.target.position.copy(k.pos);
 }
 
-/* ================= HUD / MINIMAPA ================= */
+/* ===== HUD / MINIMAPA ===== */
 const $=id=>document.getElementById(id);
 let mmBase=null,mmPts=null;
 function buildMinimapBase(){
@@ -1888,7 +1918,7 @@ function updateDebug(){
   "\ndrift: "+(k.drifting?"SIM":"não")+"  charge: "+k.charge.toFixed(1)+
   "\nboost: "+k.boostT.toFixed(1)+"  inv: "+k.respawnInv.toFixed(1); }
 
-/* ================= TELAS ================= */
+/* ===== TELAS ===== */
 function show(id,on){ $(id).classList.toggle("hidden",!on); }
 function toMenu(){ clearRace(); state="menu"; show("menu",true); show("select",false); show("hud",false);
  show("results",false); show("pause",false); show("touch",false); show("fsRace",false); show("hudEditPanel",false); hudEditActive=false; AU.engineOff(); }
@@ -2036,7 +2066,7 @@ function bindUI(){
   if(e.code==="ArrowLeft")selectChar((selChar+13)%15+1);
   if(e.code==="Enter")startRace(); }); }
 
-/* ================= LOOP ================= */
+/* ===== LOOP ===== */
 let lastT=performance.now(),fpsAcc=0,fpsN=0;
 function syncKartMesh(k,alpha){
  const x=k.ppx+(k.pos.x-k.ppx)*alpha, y=k.ppy+(k.pos.y-k.ppy)*alpha, z=k.ppz+(k.pos.z-k.ppz)*alpha;
@@ -2119,6 +2149,13 @@ function boot(){
  bindUI();
  hudConfig=loadHudConfig();
  applyHudLayout();
+ // CORREÇÃO: bloqueia o menu de contexto APENAS dentro do jogo.
+ // Campos de texto (input/textarea/contentEditable) continuam com o menu normal.
+ document.addEventListener("contextmenu",e=>{
+   const t=e.target;
+   if(t&&(t.isContentEditable||t.tagName==="INPUT"||t.tagName==="TEXTAREA"))return;
+   e.preventDefault();
+ });
  if(isTouch){ const h=document.getElementById("menuHint");
   if(h)h.textContent="Toque em JOGAR · use os botões na tela para acelerar, virar e driftar"; }
  toMenu();
